@@ -424,7 +424,7 @@ sub_00033910	209				ryu-object	1	5
 sub_000339F0	130					1	0	
 sub_00033A80	62				ryu-object	1	0	
 sub_00033AC0	131					3	0	
-sub_00033B50	125	apply action to Ryu's character data	map:likely			4	0	
+sub_00033B50	125	object by number	map:likely			4	0	
 sub_00033BD0	40	Ryu action helper	map:guess		ryu-object	5	0	
 sub_00033C00	103				ryu-object	3	0	
 sub_00033C70	115				ryu-object	1	0	
@@ -486,7 +486,7 @@ sub_0003970A	50					0	2
 sub_00039740	197					12	1	
 sub_00039810	62					22	1	
 sub_00039850	29					1	1	
-sub_00039870	270	set Ryu's action/move	map:likely			12	2	
+sub_00039870	270	query an object's state (by object number)	map:likely			12	2	
 sub_00039980	25					1	1	
 sub_000399A0	77					1	2	
 sub_000399F0	389					6	3	
@@ -539,7 +539,7 @@ sub_0003BF16	186					0	0
 sub_0003BFD0	675					8	5	
 sub_0003C280	144					9	5	
 sub_0003C310	178					6	2	
-sub_0003C3D0	174					49	3	
+sub_0003C3D0	174	set an object's action (command)	map:likely			49	3	
 sub_0003C480	73					1	0	
 sub_0003C4D0	67					2	0	
 sub_0003C520	714					1	1	
