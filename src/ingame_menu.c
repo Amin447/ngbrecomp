@@ -1262,6 +1262,8 @@ void nv2a_window_event_hook(const void *sdl_event)
         ngb_trace_request = 1;
     }
     {   /* src/func_recorder.c: F9 starts or stops a recording, F6 marks a moment in it */
+        extern int ngb_show_action(void);
+#define ngb_show_action_mode_title() ngb_show_action()
         extern volatile int ngb_rec_toggle_request, ngb_rec_marker_request, ngb_rec_active;
         static char base_title[256];
         static int shown = -1;
@@ -1270,7 +1272,20 @@ void nv2a_window_event_hook(const void *sdl_event)
         if (ev->type == SDL_KEYDOWN && !ev->key.repeat && ev->key.keysym.sym == SDLK_F6 && ngb_rec_active)
             ngb_rec_marker_request = 1;
         SDL_Window *w = SDL_GetKeyboardFocus();
-        if (w && shown != ngb_rec_active) {
+        {   /* NGB_SHOW_ACTION=1: Ryu's action in the title (src/action_log.c) */
+            extern int ngb_show_action(void);
+            extern uint32_t ngb_action_title(char *out, size_t n);
+            static uint32_t serial = ~0u;
+            char t[200];
+            if (w && ngb_show_action()) {
+                uint32_t now = ngb_action_title(t, sizeof t);
+                if (now != serial) {
+                    SDL_SetWindowTitle(w, t);
+                    serial = now;
+                }
+            }
+        }
+        if (w && !ngb_show_action_mode_title() && shown != ngb_rec_active) {
             if (!base_title[0])
                 snprintf(base_title, sizeof base_title, "%s", SDL_GetWindowTitle(w));
             char t[300];
