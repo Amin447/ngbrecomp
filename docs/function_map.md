@@ -133,7 +133,7 @@ what Ryu plays.
 
 **How the next move is picked (confirmed):** sub_00034A10 chooses one of Ryu's ryu.chr move records (from the command at object + 0x277C and his player block); sub_000345F0 writes the record's move (record + 2) to object + 0x2788 and starts it. The move_swap mod hooks that read: move_swap=0x191:0x1F2 made X X end in the XYY finisher, with no other change. Editing the loaded ryu.chr instead gave a disc error.
 
-**Object types:** the u16 at object + 0x2774 is the object's type (objects with the same value share their character data, + 0x26D8). Ryu 0x0000, his sword 0x0001 (likely), white-clad ninja 0x0044 (seen live, chapter 1). Chapter 1 had 19 types at once (recordings/objects.txt), enemies and props.
+**Object types:** the u16 at object + 0x2774 is the object's type (objects with the same value share their character data, + 0x26D8). Ryu 0x0000, his sword 0x0001 (likely), Genin 0x000E, white-clad ninja 0x0044 (seen live, chapter 1). Chapter 1 had 19 types at once (recordings/objects.txt), enemies and props.
 
 ## Memory
 

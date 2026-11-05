@@ -18,6 +18,8 @@
  *   anim_swap=39:80    every move of Ryu's whose animation id is 39 plays 80 instead (up to 8
  *                      lines; ids as in tools/ryu_moves.py: below 10000 Ryu's own clips,
  *                      10000 + N the weapon's clip N)
+ *   enemy_swap=0xE:0x44  every object spawned as type 0xE (Genin) spawns as 0x44 (white-clad
+ *                      ninja) instead (up to 8 lines; types as the ShowAction title's "hit type")
  *   move_swap=0x191:0x1F2  every move record of Ryu's (ryu.chr) that picks move 0x191 picks 0x1F2
  *                      instead: rewires combos (up to 8 lines; numbers as the ShowAction title
  *                      shows them, 0x prefix for hex)
@@ -37,6 +39,8 @@ static uint16_t s_swap_from[8], s_swap_to[8];
 static int s_nswap;
 static uint16_t s_mswap_from[8], s_mswap_to[8];
 static int s_nmswap;
+static uint16_t s_eswap_from[8], s_eswap_to[8];
+static int s_neswap;
 
 static void set_option(const char *key, const char *val)
 {
@@ -49,6 +53,14 @@ static void set_option(const char *key, const char *val)
             s_swap_from[s_nswap] = (uint16_t)from;
             s_swap_to[s_nswap] = (uint16_t)to;
             s_nswap++;
+        }
+    }
+    else if (!strcmp(key, "enemy_swap") && s_neswap < 8) {
+        int from, to;
+        if (sscanf(val, "%i:%i", &from, &to) == 2) {
+            s_eswap_from[s_neswap] = (uint16_t)from;
+            s_eswap_to[s_neswap] = (uint16_t)to;
+            s_neswap++;
         }
     }
     else if (!strcmp(key, "move_swap") && s_nmswap < 8) {
@@ -238,6 +250,20 @@ uint16_t mymod_move_pick(uint16_t move)
         if (move == s_mswap_from[k])
             return s_mswap_to[k];
     return move;
+}
+
+/* ---- Enemy swaps (enemy_swap=FROM:TO) ----
+ * Objects are spawned from spawn records: +0x40 position, +0x50 u16 type (the object's +0x2774).
+ * The spawn functions (sub_00153100, sub_002CD040, sub_002F2CC0; generated code edited by
+ * tools/patch_enemy_pick.py) read the type through here. The new type's data must be loaded in
+ * that area: swap between enemies of the same chapter. */
+uint16_t mymod_enemy_pick(uint16_t type)
+{
+    load_options();
+    for (int k = 0; k < s_neswap; k++)
+        if (type == s_eswap_from[k])
+            return s_eswap_to[k];
+    return type;
 }
 
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
