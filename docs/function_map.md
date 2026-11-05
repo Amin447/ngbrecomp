@@ -135,6 +135,8 @@ what Ryu plays.
 
 **Object types:** the u16 at object + 0x2774 is the object's type (objects with the same value share their character data, + 0x26D8). Ryu 0x0000, his sword 0x0001 (likely), Genin 0x000E, white-clad ninja 0x0044, bat 0x001C (seen live, chapter 1). Chapter 1 had 19 types at once (recordings/objects.txt), enemies and props.
 
+**Enemy swap (confirmed in game):** objects spawn from spawn records (+0x40 position, +0x50 u16 type); the spawn functions (sub_00153100, sub_002CD040, sub_002F2CC0) read the type through mymod_enemy_pick, and the other type writers (sub_00168EC0, sub_002F2780, sub_002F7020) through mymod_type_write (generated code edited by tools/patch_enemy_pick.py and tools/patch_type_write.py). enemy_swap=0xE:0x44 turned chapter 1's Genin into white-clad ninjas, from a save where both are loaded. Swaps wait until Ryu stands in a level. The game sometimes shows its 'disc dirty or damaged' screen at startup with the same settings that work on the next try (ShowAction.bat saves stderr to recordings/stderr.txt to find out why).
+
 ## Memory
 
 | Address | What | Source |
