@@ -131,6 +131,8 @@ what Ryu plays.
 
 **Attack moves seen live (Dragon Sword, standing tap):** X = move 0x190 (weapon animation 400; XX = 0x191 / anim 401, XXX = 0x192 / anim 402, seen live; 0x193, 0x194 follow in the data, all action 0x0B; ryu.chr record with action 0x0B), XY = move 0x226, XYX = move 0x227, XYY = move 0x1F2 (seen live). Y = move 0x1CC (weapon animation 460; records with action 0xFF). Swap test confirmed: anim_swap=10400:10550 made the first X hit play the XY swing. The current-move field 0x4B75D8 tracks attacks, so it is the way to tell them apart.
 
+**How the next move is picked (confirmed):** sub_00034A10 chooses one of Ryu's ryu.chr move records (from the command at object + 0x277C and his player block); sub_000345F0 writes the record's move (record + 2) to object + 0x2788 and starts it. The move_swap mod hooks that read: move_swap=0x191:0x1F2 made X X end in the XYY finisher, with no other change. Editing the loaded ryu.chr instead gave a disc error.
+
 ## Memory
 
 | Address | What | Source |
