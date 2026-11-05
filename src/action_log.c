@@ -241,6 +241,58 @@ static void mf_frame(uint32_t action, int changed);
 static uint32_t mf_anim(uint32_t move);
 #define MOVE_FIELD 0x4B75D8u   /* Ryu's object + 0x2788: his current move (found from jumps) */
 
+/* ---- Move-writer tracer (NGB_SHOW_ACTION): on every function entry, check Ryu's move. When it
+ * changed, the writer is one of the functions entered just before (or their caller). Each change
+ * is logged to recordings/move_writer.txt with the last 8 functions entered, newest first. ---- */
+#define MW_RING 8
+#define MW_LOG 256
+static uint32_t s_mw_ring[MW_RING], s_mw_pos, s_mw_last = ~0u;
+static struct { uint32_t from, to, va[MW_RING]; } s_mw_log[MW_LOG];
+static volatile uint32_t s_mw_n, s_mw_done;
+
+static void mw_hook(uint32_t va)
+{
+    uint32_t mv = MEM16(MOVE_FIELD);
+    if (mv != s_mw_last) {
+        if (s_mw_last != ~0u && s_mw_n < MW_LOG) {
+            uint32_t i = s_mw_n;
+            s_mw_log[i].from = s_mw_last;
+            s_mw_log[i].to = mv;
+            for (int k = 0; k < MW_RING; k++)
+                s_mw_log[i].va[k] = s_mw_ring[(s_mw_pos - 1 - k) & (MW_RING - 1)];
+            s_mw_n = i + 1;
+        }
+        s_mw_last = mv;
+    }
+    s_mw_ring[s_mw_pos++ & (MW_RING - 1)] = va;
+}
+
+static void mw_frame(void)
+{
+    static int started;
+    if (!started) {
+        started = 1;
+        g_recomp_entry_hook = mw_hook;
+        if (!g_recomp_capture_va)
+            g_recomp_capture_va = 1;
+    }
+    uint32_t n = s_mw_n;
+    if (n == s_mw_done)
+        return;
+    make_dir("recordings");
+    FILE *f = fopen("recordings/move_writer.txt", s_mw_done ? "a" : "w");
+    if (!f)
+        return;
+    for (uint32_t i = s_mw_done; i < n; i++) {
+        fprintf(f, "move %03X > %03X  just before:", s_mw_log[i].from, s_mw_log[i].to);
+        for (int k = 0; k < MW_RING; k++)
+            fprintf(f, " %08X", s_mw_log[i].va[k]);
+        fputc('\n', f);
+    }
+    fclose(f);
+    s_mw_done = n;
+}
+
 int ngb_show_action(void)
 {
     static int on = -1;
@@ -254,6 +306,7 @@ void ngb_action_watch_frame(void)
 {
     if (!ngb_show_action())
         return;
+    mw_frame();
     uint32_t now = MEM8(ACTION_BYTE);
     mf_frame(now, now != s_shown[0]);
     {   /* the title is made on the window thread: it reads these, never guest memory */
