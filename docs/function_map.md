@@ -81,6 +81,7 @@ seen for the named rows, though not every move was checked one by one. Unnamed r
 | 0x06 | 27 | 00, 2A | none | standing idle |
 | 0x08 | 1 | 06 | stick (slow) | start walking (Ryu's animation 82; seen live: 00 > 06 > 08 > 09) |
 | 0x09 | 1 | 08 | stick (slow) | walking (Ryu's animation 3) |
+| 0x0A | 4 | 09 | none | stop walking (Ryu's animations 4, 5); then 0x00 (seen live) |
 | 0x26 | 40 | 06, 2A | none | start running |
 | 0x28 | 25 | 26 | none | running |
 | 0x2A | 26 | 28, 26 | none | stopping from a run |
@@ -97,7 +98,7 @@ seen for the named rows, though not every move was checked one by one. Unnamed r
 | 0x5F | 1 | 61 | A | second jump or air move |
 | 0x61 | 3 | 56, 57 | none | in the air / falling |
 | 0xFF | 15 | 00, 2A, 4E | none or X | no action (between moves) |
-| 0x0A, 0x0E, 0x16, 0x24, 0x2D, 0x32, 0x4F, 0x67, 0x86, 0x8A | 1-5 | | | unknown (hit reactions, landings, wall moves?) |
+| 0x0E, 0x16, 0x24, 0x2D, 0x32, 0x4F, 0x67, 0x86, 0x8A | 1-5 | | | unknown (hit reactions, landings, wall moves?) |
 | 0xB9 | | | X held | Ultimate Technique charge (src/ut_charge.c) |
 
 
