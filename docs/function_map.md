@@ -72,7 +72,8 @@ evidence), *guess*.
 ## Ryu's actions (0x4968B4)
 
 From one free-play action log (act_20261105_183150.tsv): each number, how it was reached and the
-buttons held. Names are guesses from a single session; confirm before relying on them.
+buttons held. Checked live with ShowAction.bat (NGB_SHOW_ACTION=1) on 2026-11-05: no mismatches
+seen for the named rows, though not every move was checked one by one. Unnamed rows remain open.
 
 | Action | Seen | Usually after | Buttons | Guess |
 |---|---|---|---|---|
@@ -126,3 +127,4 @@ buttons held. Names are guesses from a single session; confirm before relying on
 | 2026-11-05 | rec_20261105_171515.bin | 2: still / jump in place / still / jump | 8 jumps, 36 frames airborne each, height 2.32 (y up). Airborne sub_001963B0, take-off sub_0002BDD0, landing sub_001999B0 |
 | 2026-11-05 | rec_20261105_172113.bin | 3: still / X light / still / Y heavy | Shared attack path sub_00039870 -> sub_00033B50; heavy attacks drive much more audio library work. Controller data was missing in rounds 1-3 (wrong address); fixed for round 4 |
 | 2026-11-05 | rec_20261105_173623.bin | 4: still / guard / still / roll | First recording with controller data (guard = LT/Shift). Guard adds almost no functions: it is a state change, needs a memory diff. Roll shares the jump start sub_0002BDD0; roll-only sub_0001B3C0 |
+| 2026-11-05 | ShowAction.bat (live title) | check the action names | No mismatches reported for the named actions |
