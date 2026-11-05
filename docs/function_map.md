@@ -36,6 +36,16 @@ evidence), *guess*.
 | sub_00308BF0 | insert render node | known | src/render_list.c | Pool of 768 nodes |
 | sub_001CA790 | reset render lists | known | src/render_list.c | |
 | sub_00221210 | queue HUD and 2D layer | known | src/render_list.c | |
+| sub_000FF1A0 | Ryu update (movement/physics) | likely | round 1 | Huge (4600 lines); writes Ryu's position 0x4B5710; runs only while moving in round 1 |
+| sub_00107640 | caller of Ryu update | guess | round 1 | Calls sub_000FF1A0 |
+| sub_000247D0 | run/locomotion step | likely | round 1 | Reads the active character at [0xDB9E9C]; called by sub_00024160 |
+| sub_0002C390 | turn toward stick direction | likely | round 1 | Angle difference on 16-bit angles (0x4000 = 90 deg) at char +0x78C/+0x2D0/+0x2D4; called by sub_00025310 |
+| sub_00011050 | move-script helper used while running | guess | round 1 | Called from the move script sub_00016300 |
+| sub_0001B120 | move-script input test used while running | guess | round 1 | Called by sub_00016300 and the button helpers near sub_0001B940 |
+| sub_003075D0 | per-object effect/attachment while moving | guess | round 1 | ~5 calls a frame while running; many callers |
+| sub_000772B0 | wrapper: sub_001CA870 + sub_003075D0 | guess | round 1 | |
+| sub_00193F70 | moving-only group (footsteps/ground effects?) | guess | round 1 | Calls sub_001999B0 and sub_001996E0, both running-only |
+| sub_001BDD10 | Ryu-specific moving check | guess | round 1 | Reads Ryu's object 0x4B4E50 |
 
 ## Memory
 
@@ -54,8 +64,10 @@ evidence), *guess*.
 | 0xDB9477 | watched-event flags, one byte an event | src/cutscene_skip.c |
 | 0xDB9ACC | right stick mode (0 first person, 1 camera) | src/camera.c |
 | 0x5895E2 / E4 | UT charge level / frame count | src/ut_charge.c |
+| 0xDB9E9C | pointer to the active character's control block (angles at +0x78C, +0x2D0, +0x2D4) | round 1 |
 
 ## Sessions
 
 | Date | Recording | Task | Findings |
 |---|---|---|---|
+| 2026-11-05 | rec_20261105_170913.bin | 1: still / run / still / run (F6 between) | 101 functions only while running; Ryu update sub_000FF1A0, turning sub_0002C390. Recording ran at ~17 fps |
