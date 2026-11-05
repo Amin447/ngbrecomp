@@ -293,6 +293,51 @@ static void mw_frame(void)
     s_mw_done = n;
 }
 
+/* ---- Object logger (NGB_SHOW_ACTION): every 30 frames, each object slot (0x4B4E50 + 0x2800 n,
+ * Ryu is slot 0) whose character-data pointer (+0x26D8) is set. When the list changes it is
+ * written to recordings/objects.txt: slot, that pointer, the first bytes it points at, the
+ * health block (+0x27F0) and its health sum, the health-bar id (+0x2774), the position
+ * (+0x8C0) and the object's first 16 bytes. Used to find which field says the enemy type. ---- */
+#define OL_BASE 0x4B4E50u
+#define OL_STEP 0x2800u
+#define OL_SLOTS 48
+static void ol_frame(void)
+{
+    static unsigned tick, snap;
+    static uint32_t last[OL_SLOTS];
+    if (++tick % 30)
+        return;
+    uint32_t now[OL_SLOTS];
+    int diff = 0;
+    for (int i = 0; i < OL_SLOTS; i++) {
+        now[i] = MEM32(OL_BASE + OL_STEP * i + 0x26D8);
+        if (now[i] != last[i])
+            diff = 1;
+    }
+    if (!diff)
+        return;
+    memcpy(last, now, sizeof last);
+    make_dir("recordings");
+    FILE *f = fopen("recordings/objects.txt", snap ? "a" : "w");
+    if (!f)
+        return;
+    fprintf(f, "== snapshot %u (frame %u), Ryu move %03X\n", ++snap, tick, MEM16(MOVE_FIELD));
+    for (int i = 0; i < OL_SLOTS; i++) {
+        uint32_t o = OL_BASE + OL_STEP * i, cd = now[i];
+        if (!cd)
+            continue;
+        uint32_t hb = MEM8(o + 0x27F0), blk = 0x58A3A0u + 0x210u * hb;
+        fprintf(f, "slot %2u obj %08X chr %08X [", i, o, cd);
+        if (cd >= 0x10000 && cd < 0x08000000)
+            for (int k = 0; k < 16; k++) fprintf(f, "%02X", MEM8(cd + k));
+        fprintf(f, "] hb %u hp %u bar %04X pos %.1f %.1f %.1f head",
+                hb, MEM16(blk + 0x1C6), MEM16(o + 0x2774), MEMF(o + 0x8C0), MEMF(o + 0x8C4), MEMF(o + 0x8C8));
+        for (int k = 0; k < 16; k += 4) fprintf(f, " %08X", MEM32(o + k));
+        fputc('\n', f);
+    }
+    fclose(f);
+}
+
 int ngb_show_action(void)
 {
     static int on = -1;
@@ -307,6 +352,7 @@ void ngb_action_watch_frame(void)
     if (!ngb_show_action())
         return;
     mw_frame();
+    ol_frame();
     uint32_t now = MEM8(ACTION_BYTE);
     mf_frame(now, now != s_shown[0]);
     {   /* the title is made on the window thread: it reads these, never guest memory */
