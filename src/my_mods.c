@@ -358,11 +358,38 @@ uint32_t mymod_variant(uint32_t obj, int field, uint32_t value)
     return value;
 }
 
+/* Kind swaps for objects spawned elsewhere: the first frame an object slot holds a new object
+ * (its character data pointer changed), its kind is swapped there too. */
+static void variant_frame(void)
+{
+    static uint32_t seen[48];
+    if (!s_nvswap)
+        return;
+    int ingame = !(MEMF(0x4B5710) == 0.0f && MEMF(0x4B5714) == 0.0f && MEMF(0x4B5718) == 0.0f);
+    for (int i = 1; i < 48; i++) {
+        uint32_t o = 0x4B4E50u + 0x2800u * i, cd = MEM32(o + 0x26D8);
+        if (cd == seen[i])
+            continue;
+        seen[i] = cd;
+        if (!cd || !ingame)
+            continue;
+        uint16_t type = MEM16(o + 0x2774), kind = MEM16(o + 0x277A);
+        for (int k = 0; k < s_nvswap; k++)
+            if (type == s_vswap_type[k] && kind == s_vswap_from[k]) {
+                MEM16(o + 0x277A) = s_vswap_to[k];
+                if (MEM8(o + 0x2791) == 0x81u + s_vswap_from[k])
+                    MEM8(o + 0x2791) = (uint8_t)(0x81u + s_vswap_to[k]);
+                break;
+            }
+    }
+}
+
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
 void mymod_frame(void)
 {
     mymod_frames++;
     load_options();
+    variant_frame();
     if (!s_nswap)
         return;
     static unsigned tick;
