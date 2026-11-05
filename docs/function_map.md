@@ -88,11 +88,14 @@ seen for the named rows, though not every move was checked one by one. Unnamed r
 | 0x46 | 11 | 47, 00 | LT | guard |
 | 0x47 | 6 | 46, 24 | LT | guard (held / moving) |
 | 0x22 | 4 | 46, 06 | LT | roll from guard |
-| 0x56, 0x57, 0x58 | 2, 2, - | 00, 2A, 28, 26 | A | running jump take-off (all use Ryu's animation 39; confirmed by the swap test). The standing jump is a different action, not found yet |
+| 0x55 | - | 00, 06 | A | standing jump take-off (Ryu's animations 34, 35); then 0x30, then 0x02 (seen live) |
+| 0x30 | 4 | 61, 86, 16 | none | in the air / falling (23 records, shared by many moves) |
+| 0x02 | 3 | 30 | none | landing (Ryu's 650, 651) |
+| 0x56, 0x57, 0x58 | 2, 2, - | 00, 2A, 28, 26 | A | running jump take-off (all use Ryu's animation 39; confirmed by the swap test). The standing jump is 0x55 |
 | 0x5F | 1 | 61 | A | second jump or air move |
 | 0x61 | 3 | 56, 57 | none | in the air / falling |
 | 0xFF | 15 | 00, 2A, 4E | none or X | no action (between moves) |
-| 0x02, 0x08-0x0A, 0x0E, 0x16, 0x24, 0x2D, 0x30, 0x32, 0x4F, 0x67, 0x86, 0x8A | 1-5 | | | unknown (hit reactions, landings, wall moves?) |
+| 0x08-0x0A, 0x0E, 0x16, 0x24, 0x2D, 0x32, 0x4F, 0x67, 0x86, 0x8A | 1-5 | | | unknown (hit reactions, landings, wall moves?) |
 | 0xB9 | | | X held | Ultimate Technique charge (src/ut_charge.c) |
 
 
