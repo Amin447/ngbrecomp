@@ -397,9 +397,12 @@ loc_0015442B: ;
  * (guarded, or nothing to take) is left as the game has it; Ryu's are left alone. */
 static void damage_apply(void);
 
+volatile uint32_t ngb_last_hit_type = ~0u;   /* action_log.c title: type (+0x2774) of the last object hit */
 void sub_001E1680(void)
 {
     uint32_t target = MEM32(esp + 4);
+    if (target != 0x4B4E50)
+        ngb_last_hit_type = MEM16(target + 0x2774);
     if (!s_cheat[9] || target == 0x4B4E50 || !MEM8(target + 0x27F0)) {
         struct mymod_hit hit;                     /* my_mods.c: damage multipliers */
         mymod_hit_begin(&hit, target);
