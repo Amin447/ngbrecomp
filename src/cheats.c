@@ -1339,6 +1339,7 @@ void ngb_frame_tick(void)
     ngb_aspect_frame_end();
     ngb_aspect_tick();
     cheat_tick();
+    { extern void mymod_frame(void); mymod_frame(); }   /* src/my_mods.c: animation swaps */
     { extern void ngb_rec_frame(void); ngb_rec_frame(); }   /* src/func_recorder.c: F9 recordings */
     memdump_tick();
     poke_tick();
