@@ -56,6 +56,13 @@ evidence), *guess*.
 | sub_001BE1D0 | landing / ground contact check | guess | round 2 | On landing; reads Ryu's object, health block and event number |
 | sub_00034D60 | landing helper | guess | rounds 1-2 | Called by sub_0003E4E0 and sub_00197370 |
 | sub_001CA870 | effect or sound spawn (also while running) | guess | rounds 1-2 | With sub_001CB260, on jumps and steps |
+| sub_00039870 | set Ryu's action/move | likely | round 3 | Runs on both attack types; called from many movement and attack paths; calls sub_00033B50 |
+| sub_00033B50 | apply action to Ryu's character data | likely | round 3 | Reads Ryu's object 0x4B4E50 and his character data near 0x4B75DE / 0x4B7640 |
+| sub_00033BD0 | Ryu action helper | guess | round 3 | Called by the move script sub_00016300 and sub_0003D140 |
+| sub_0003A100 | start an attack action | guess | round 3 | Only during attacks; calls sub_00039870; called by sub_0003D140 and sub_00198D70 |
+| sub_000303A0 | attack input / combo buffer check | guess | round 3 | Reads 0xDB9F84; called by the button helper sub_0001B6D0 |
+| sub_001A4580 | audio middleware (very frequent) | guess | round 3 | 7 lines, ~100 calls a frame during heavy attacks; called from the 0x0031F930-0x00330E70 library code |
+| sub_00346800 | audio middleware | guess | round 3 | Same pattern; 0x0034xxxx is the CRI library area (see sub_00344BE0) |
 
 ## Memory
 
@@ -76,6 +83,7 @@ evidence), *guess*.
 | 0x5895E2 / E4 | UT charge level / frame count | src/ut_charge.c |
 | 0xDB9E9C | pointer to the active character's control block (angles at +0x78C, +0x2D0, +0x2D4) | round 1 |
 | 0x00020040 | move-script op table (consecutive entries are script commands) | round 2 |
+| 0xDB9F84 | attack input / combo state | round 3 |
 
 ## Sessions
 
@@ -83,3 +91,4 @@ evidence), *guess*.
 |---|---|---|---|
 | 2026-11-05 | rec_20261105_170913.bin | 1: still / run / still / run (F6 between) | 101 functions only while running; Ryu update sub_000FF1A0, turning sub_0002C390. Recording ran at ~17 fps |
 | 2026-11-05 | rec_20261105_171515.bin | 2: still / jump in place / still / jump | 8 jumps, 36 frames airborne each, height 2.32 (y up). Airborne sub_001963B0, take-off sub_0002BDD0, landing sub_001999B0 |
+| 2026-11-05 | rec_20261105_172113.bin | 3: still / X light / still / Y heavy | Shared attack path sub_00039870 -> sub_00033B50; heavy attacks drive much more audio library work. Controller data was missing in rounds 1-3 (wrong address); fixed for round 4 |

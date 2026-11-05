@@ -15,8 +15,10 @@
  *
  * File: "NGBREC1\0", u32 version (1), then one record a frame:
  *   u32 'FRM0', u32 frame, u64 microseconds since start, u32 flags (bit 0 a
- *   marker this frame), f32 Ryu's x y z (0x4B5710), the first player's pad
- *   block (0x78 bytes from 0xD219A8), u32 n, then n x { u32 va, u32 calls }.
+ *   marker this frame), f32 Ryu's x y z (0x4B5710), 0x78 bytes of input: the
+ *   first controller's XBOX_GAMEPAD as the game reads it (version 2: wButtons,
+ *   8 analog buttons A B X Y Black White LT RT, 4 stick shorts; the rest zero),
+ *   u32 n, then n x { u32 va, u32 calls }.
  */
 #define RECOMP_GENERATED_CODE
 #include "recomp_funcs.h"
@@ -37,11 +39,11 @@
 #define REC_VA_LIMIT   0x00E00000u      /* past the highest lifted function (0x00DC1918) */
 #define REC_TOUCH_MAX  (1u << 17)
 #define REC_MAX_SECONDS 120
-#define PAD_BLOCK      0xD219A8u
 #define PAD_SIZE       0x78u
 
 extern uint32_t g_recomp_capture_va;
 extern void (*volatile g_recomp_entry_hook)(uint32_t va);
+extern unsigned char ngb_rec_pad[32];  /* src/bindings.c */
 
 volatile int ngb_rec_toggle_request;     /* set by F9 (src/ingame_menu.c) */
 volatile int ngb_rec_marker_request;     /* set by F6 */
@@ -98,7 +100,7 @@ static void rec_start(void)
         return;
     }
     static const char magic[8] = "NGBREC1";
-    uint32_t version = 1;
+    uint32_t version = 2;
     fwrite(magic, 1, 8, s_file);
     fwrite(&version, 4, 1, s_file);
     memset(s_counts, 0, REC_VA_LIMIT * sizeof *s_counts);
@@ -141,7 +143,9 @@ static void rec_write_frame(int marker)
     fwrite(&us, 8, 1, s_file);
     fwrite(&flags, 4, 1, s_file);
     fwrite(pos, 4, 3, s_file);
-    fwrite((const void *)XBOX_PTR(PAD_BLOCK), 1, PAD_SIZE, s_file);
+    unsigned char pad[PAD_SIZE] = { 0 };
+    memcpy(pad, ngb_rec_pad, sizeof ngb_rec_pad);
+    fwrite(pad, 1, PAD_SIZE, s_file);
 
     if (s_overflow) {                     /* too many to have listed: take them all from the table */
         uint32_t count = 0;

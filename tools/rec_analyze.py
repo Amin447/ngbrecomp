@@ -18,12 +18,19 @@ import struct
 import sys
 
 PAD_SIZE = 0x78
+VERSION = 1
+DIGITAL = ["dpad up", "dpad down", "dpad left", "dpad right", "start", "back",
+           "left stick click", "right stick click"]
+ANALOG = ["A (jump)", "B (projectile)", "X (attack)", "Y (heavy attack)", "Black", "White",
+          "LT", "RT (guard)"]
 
 
 def load(path):
     data = pathlib.Path(path).read_bytes()
     if data[:7] != b"NGBREC1":
         sys.exit(f"{path}: not a recording")
+    global VERSION
+    (VERSION,) = struct.unpack_from("<I", data, 8)
     off = 12
     frames = []
     while off + 32 + PAD_SIZE + 4 <= len(data):
@@ -171,15 +178,21 @@ def follow(frames, signal, names, top, title):
 
 
 def cmd_buttons(frames, names, top):
-    words = len(frames[0]["pad"]) // 4
-    for w in range(words):
-        vals = [struct.unpack_from("<I", f["pad"], 4 * w)[0] for f in frames]
-        for bit in range(32):
-            sig = [(v >> bit) & 1 for v in vals]
-            on = sum(sig)
-            if 3 <= on <= len(sig) - 3:
-                follow(frames, sig, names, top, f"pad +0x{4 * w:02X} bit {bit}")
-                print()
+    if VERSION < 2:
+        print("This recording has no controller data (recorded before version 2).")
+        return
+    for bit, name in enumerate(DIGITAL):
+        sig = [(struct.unpack_from("<H", f["pad"], 0)[0] >> bit) & 1 for f in frames]
+        if 3 <= sum(sig) <= len(sig) - 3:
+            follow(frames, sig, names, top, f"{name} held")
+            print()
+    for i, name in enumerate(ANALOG):
+        held = [int(f["pad"][2 + i] > 0x20) for f in frames]
+        press = [0] + [int(b and not a) for a, b in zip(held, held[1:])]
+        near = [int(any(press[max(0, k - 1):k + 6])) for k in range(len(press))]
+        if sum(press) >= 2:
+            follow(frames, near, names, top, f"{name}: the frames just after a press ({sum(press)} presses)")
+            print()
 
 
 def cmd_moving(frames, names, top):
