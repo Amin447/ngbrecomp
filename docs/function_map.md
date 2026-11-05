@@ -129,6 +129,8 @@ what Ryu plays.
 
 **Current move:** the u16 at Ryu's object + 0x2788 (0x4B75D8) is the move playing now; it matched the known move in 12 of 12 jumps. Attacks do not show in the action byte (it reads 0xFF or 0x08 around them), so the move number is how to tell attacks apart.
 
+**Attack moves seen live (Dragon Sword, standing tap):** X = move 0x190 (weapon animation 400; ryu.chr record with action 0x0B), Y = move 0x1CC (weapon animation 460; records with action 0xFF). The current-move field 0x4B75D8 tracks attacks, so it is the way to tell them apart.
+
 ## Memory
 
 | Address | What | Source |
