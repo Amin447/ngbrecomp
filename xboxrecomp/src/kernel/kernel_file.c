@@ -35,6 +35,8 @@ void (*xbox_GuestDmaWriteHook)(void *host, size_t len);
 /* Called for every read the title makes, with the host path of the file
  * (NULL if unknown); a front end uses it to see a movie playing. */
 void (*xbox_FileReadHook)(const char *host_path, uint64_t offset, size_t len);
+/* The buffer of the read xbox_FileReadHook is called for (a hook may want where it goes). */
+void *volatile xbox_FileReadBuffer;
 
 /* Get the ANSI path from OBJECT_ATTRIBUTES (platform-independent). */
 static const char* get_xbox_path(PXBOX_OBJECT_ATTRIBUTES ObjectAttributes)
@@ -289,6 +291,7 @@ NTSTATUS __stdcall xbox_NtReadFile(
             at = *ByteOffset;
         else
             SetFilePointerEx(FileHandle, zero, &at, FILE_CURRENT);
+        xbox_FileReadBuffer = Buffer;
         xbox_FileReadHook(n && n < sizeof path ? path : NULL, (uint64_t)at.QuadPart, Length);
     }
     if (xbox_GuestDmaWriteHook)
@@ -961,6 +964,8 @@ NTSTATUS __stdcall xbox_NtReadFile(
 
     if (ByteOffset && ByteOffset->QuadPart >= 0)
         lseek(fd, (off_t)ByteOffset->QuadPart, SEEK_SET);
+    if (xbox_FileReadHook)
+        xbox_FileReadBuffer = Buffer;
     if (xbox_FileReadHook)
         xbox_FileReadHook(w32_handle_path(FileHandle),
                           (uint64_t)lseek(fd, 0, SEEK_CUR), Length);

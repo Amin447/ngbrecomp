@@ -32,6 +32,7 @@
 #define RECOMP_GENERATED_CODE
 #include "recomp_funcs.h"
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -339,6 +340,79 @@ static void ol_frame(void)
     fclose(f);
 }
 
+/* ---- Type namer (NGB_SHOW_ACTION): every read of a chr_*.afs archive is remembered with where it
+ * went in guest memory. An object whose character data (+0x26D8) lies in one of those reads gets
+ * its type (+0x2774) named after the archive; the list is in recordings/types.txt. ---- */
+extern void (*xbox_FileReadHook)(const char *host_path, uint64_t offset, size_t len);
+extern void *volatile xbox_FileReadBuffer;
+extern ptrdiff_t g_xbox_mem_offset;
+#define TN_READS 1024
+static struct { char name[16]; uint32_t va, len; } s_tn_read[TN_READS];
+static volatile uint32_t s_tn_n;
+static void (*s_tn_prev)(const char *, uint64_t, size_t);
+static char s_tn_type[0x400][16];
+
+static void tn_read_hook(const char *path, uint64_t off, size_t len)
+{
+    if (s_tn_prev)
+        s_tn_prev(path, off, len);
+    if (!path)
+        return;
+    const char *b = path + strlen(path);
+    while (b > path && b[-1] != '\\' && b[-1] != '/')
+        b--;
+    if (strncmp(b, "chr_", 4) != 0)
+        return;
+    uint32_t i = s_tn_n % TN_READS;
+    size_t m = 0;
+    for (const char *c = b + 4; *c && *c != '.' && m < 15; c++)
+        s_tn_read[i].name[m++] = *c;
+    s_tn_read[i].name[m] = 0;
+    s_tn_read[i].va = (uint32_t)((intptr_t)xbox_FileReadBuffer - g_xbox_mem_offset);
+    s_tn_read[i].len = (uint32_t)len;
+    s_tn_n++;
+}
+
+static void tn_frame(void)
+{
+    static int started;
+    if (!started) {
+        started = 1;
+        s_tn_prev = xbox_FileReadHook;
+        xbox_FileReadHook = tn_read_hook;
+    }
+    static unsigned tick;
+    if (++tick % 30)
+        return;
+    int found = 0;
+    for (int i = 0; i < 48; i++) {
+        uint32_t o = 0x4B4E50u + 0x2800u * i, cd = MEM32(o + 0x26D8);
+        uint32_t t = MEM16(o + 0x2774);
+        if (!cd || t >= 0x400 || s_tn_type[t][0])
+            continue;
+        uint32_t n = s_tn_n, lo = n > TN_READS ? n - TN_READS : 0;
+        for (uint32_t k = n; k-- > lo;) {
+            uint32_t j = k % TN_READS;
+            if (cd >= s_tn_read[j].va && cd - s_tn_read[j].va < s_tn_read[j].len) {
+                memcpy(s_tn_type[t], s_tn_read[j].name, 16);
+                found = 1;
+                break;
+            }
+        }
+    }
+    if (!found)
+        return;
+    make_dir("recordings");
+    FILE *f = fopen("recordings/types.txt", "w");
+    if (!f)
+        return;
+    fprintf(f, "Object types named from the chr_*.afs their data was read from (%u reads seen)\n", s_tn_n);
+    for (int t = 0; t < 0x400; t++)
+        if (s_tn_type[t][0])
+            fprintf(f, "type %04X  %s\n", t, s_tn_type[t]);
+    fclose(f);
+}
+
 int ngb_show_action(void)
 {
     static int on = -1;
@@ -353,6 +427,7 @@ void ngb_action_watch_frame(void)
     if (!ngb_show_action())
         return;
     mw_frame();
+    tn_frame();
     {
         static uint32_t s_title_hit = ~0u;
         if (ngb_last_hit_type != s_title_hit) {
