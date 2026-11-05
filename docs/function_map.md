@@ -46,6 +46,16 @@ evidence), *guess*.
 | sub_000772B0 | wrapper: sub_001CA870 + sub_003075D0 | guess | round 1 | |
 | sub_00193F70 | moving-only group (footsteps/ground effects?) | guess | round 1 | Calls sub_001999B0 and sub_001996E0, both running-only |
 | sub_001BDD10 | Ryu-specific moving check | guess | round 1 | Reads Ryu's object 0x4B4E50 |
+| sub_00193F70 | Ryu per-state update (dispatcher) | likely | rounds 1-2 | Calls the airborne (sub_001963B0) and ground/landing (sub_001999B0, sub_001996E0) updates |
+| sub_001963B0 | Ryu airborne update | likely | round 2 | Runs exactly while Ryu is in the air (phi 1.00); 89 float accesses, no constant gravity in the code -- comes from data |
+| sub_001999B0 | Ryu ground/landing update | likely | rounds 1-2 | Strongest on the 3 frames after landing; also while running |
+| sub_00025310 | player control (stick and buttons to movement) | likely | rounds 1-2 | Calls turning sub_0002C390 and jump start sub_0002BDD0 |
+| sub_0002BDD0 | jump start (take-off) | likely | round 2 | Strongest in the frames just before leaving the ground; reads [0xDB9E9C] |
+| sub_00020F20 | move-script op used in the air | guess | round 2 | Called from the script op table at 0x00020040+; reads [0xDB9E9C] |
+| sub_0003B870 | move-script op used in the air | guess | round 2 | Same op table |
+| sub_001BE1D0 | landing / ground contact check | guess | round 2 | On landing; reads Ryu's object, health block and event number |
+| sub_00034D60 | landing helper | guess | rounds 1-2 | Called by sub_0003E4E0 and sub_00197370 |
+| sub_001CA870 | effect or sound spawn (also while running) | guess | rounds 1-2 | With sub_001CB260, on jumps and steps |
 
 ## Memory
 
@@ -65,9 +75,11 @@ evidence), *guess*.
 | 0xDB9ACC | right stick mode (0 first person, 1 camera) | src/camera.c |
 | 0x5895E2 / E4 | UT charge level / frame count | src/ut_charge.c |
 | 0xDB9E9C | pointer to the active character's control block (angles at +0x78C, +0x2D0, +0x2D4) | round 1 |
+| 0x00020040 | move-script op table (consecutive entries are script commands) | round 2 |
 
 ## Sessions
 
 | Date | Recording | Task | Findings |
 |---|---|---|---|
 | 2026-11-05 | rec_20261105_170913.bin | 1: still / run / still / run (F6 between) | 101 functions only while running; Ryu update sub_000FF1A0, turning sub_0002C390. Recording ran at ~17 fps |
+| 2026-11-05 | rec_20261105_171515.bin | 2: still / jump in place / still / jump | 8 jumps, 36 frames airborne each, height 2.32 (y up). Airborne sub_001963B0, take-off sub_0002BDD0, landing sub_001999B0 |
