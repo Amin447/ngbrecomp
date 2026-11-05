@@ -210,7 +210,7 @@ void ngb_action_frame(int toggle, int marker)
         act_stop();
 }
 
-/* ---- NGB_SHOW_ACTION=1: Ryu's action in the window title (for checking the names in
+/* ---- NGB_SHOW_ACTION=1: Ryu's action and the 9 before it in the window title (for checking the names in
  * docs/function_map.md). The game thread notes each change once a frame; the window
  * code (src/ingame_menu.c) shows it. ---- */
 
@@ -223,7 +223,9 @@ static const struct { uint8_t action; const char *name; } k_guess[] = {
     { 0xB9, "UT charge" },
 };
 
-static volatile uint32_t s_shown[3] = { 0x100, 0x100, 0x100 };   /* newest first; 0x100 = none yet */
+#define SHOWN_N 10
+static volatile uint32_t s_shown[SHOWN_N] = { 0x100, 0x100, 0x100, 0x100, 0x100,
+                                              0x100, 0x100, 0x100, 0x100, 0x100 };   /* newest first; 0x100 = none yet */
 static volatile uint32_t s_shown_serial;
 
 static const char *guess_name(uint32_t a)
@@ -249,8 +251,8 @@ void ngb_action_watch_frame(void)
         return;
     uint32_t now = MEM8(ACTION_BYTE);
     if (now != s_shown[0]) {
-        s_shown[2] = s_shown[1];
-        s_shown[1] = s_shown[0];
+        for (int i = SHOWN_N - 1; i > 0; i--)
+            s_shown[i] = s_shown[i - 1];
         s_shown[0] = now;
         s_shown_serial++;
     }
@@ -260,8 +262,8 @@ void ngb_action_watch_frame(void)
 uint32_t ngb_action_title(char *out, size_t n)
 {
     int len = snprintf(out, n, "Ryu action 0x%02X %s", s_shown[0] & 0xFF, guess_name(s_shown[0]));
-    for (int i = 1; i < 3 && len > 0 && (size_t)len < n; i++)
+    for (int i = 1; i < SHOWN_N && len > 0 && (size_t)len < n; i++)
         if (s_shown[i] != 0x100)
-            len += snprintf(out + len, n - len, "  <  0x%02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
+            len += snprintf(out + len, n - len, " < %02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
     return s_shown_serial;
 }

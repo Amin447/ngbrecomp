@@ -1276,7 +1276,7 @@ void nv2a_window_event_hook(const void *sdl_event)
             extern int ngb_show_action(void);
             extern uint32_t ngb_action_title(char *out, size_t n);
             static uint32_t serial = ~0u;
-            char t[200];
+            char t[600];
             if (w && ngb_show_action()) {
                 uint32_t now = ngb_action_title(t, sizeof t);
                 if (now != serial) {
