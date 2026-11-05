@@ -20,6 +20,8 @@
  *                      10000 + N the weapon's clip N)
  *   enemy_swap=0xE:0x44  every object spawned as type 0xE (Genin) spawns as 0x44 (white-clad
  *                      ninja) instead (up to 8 lines; types as the ShowAction title's "hit type")
+ *   variant_swap=0x5C:0:1  objects of type 0x5C (SWAT) spawned as kind 0 (object +0x277A) spawn
+ *                      as kind 1 (the shield soldier) instead (up to 8 lines)
  *   move_swap=0x191:0x1F2  every move record of Ryu's (ryu.chr) that picks move 0x191 picks 0x1F2
  *                      instead: rewires combos (up to 8 lines; numbers as the ShowAction title
  *                      shows them, 0x prefix for hex)
@@ -46,6 +48,8 @@ static uint16_t s_mswap_from[8], s_mswap_to[8];
 static int s_nmswap;
 static uint16_t s_eswap_from[8], s_eswap_to[8];
 static int s_neswap;
+static uint16_t s_vswap_type[8], s_vswap_from[8], s_vswap_to[8];
+static int s_nvswap;
 
 static void set_option(const char *key, const char *val)
 {
@@ -66,6 +70,15 @@ static void set_option(const char *key, const char *val)
             s_eswap_from[s_neswap] = (uint16_t)from;
             s_eswap_to[s_neswap] = (uint16_t)to;
             s_neswap++;
+        }
+    }
+    else if (!strcmp(key, "variant_swap") && s_nvswap < 8) {
+        int ty, from, to;
+        if (sscanf(val, "%i:%i:%i", &ty, &from, &to) == 3) {
+            s_vswap_type[s_nvswap] = (uint16_t)ty;
+            s_vswap_from[s_nvswap] = (uint16_t)from;
+            s_vswap_to[s_nvswap] = (uint16_t)to;
+            s_nvswap++;
         }
     }
     else if (!strcmp(key, "move_swap") && s_nmswap < 8) {
@@ -322,6 +335,27 @@ uint16_t mymod_type_write(uint16_t type, int site)
         }
     }
     return out;
+}
+
+/* ---- Kind swaps (variant_swap=TYPE:FROM:TO) ----
+ * sub_002F2CC0 copies a spawn record's kind (+0x52) to object +0x277A, then its partner (+0x5B) to
+ * +0x2791; it has already written the type (+0x2774). For SWAT soldiers the partner is 0x81 + the
+ * kind, so it is moved by the same amount when it matches. */
+uint32_t mymod_variant(uint32_t obj, int field, uint32_t value)
+{
+    load_options();
+    if (!s_nvswap || (MEMF(0x4B5710) == 0.0f && MEMF(0x4B5714) == 0.0f && MEMF(0x4B5718) == 0.0f))
+        return value;
+    uint16_t type = MEM16(obj + 0x2774);
+    for (int k = 0; k < s_nvswap; k++) {
+        if (type != s_vswap_type[k])
+            continue;
+        if (field == 0 && value == s_vswap_from[k])
+            return s_vswap_to[k];
+        if (field == 1 && value == 0x81u + s_vswap_from[k] && MEM16(obj + 0x277A) == s_vswap_to[k])
+            return 0x81u + s_vswap_to[k];
+    }
+    return value;
 }
 
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
