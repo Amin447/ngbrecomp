@@ -19,6 +19,12 @@
  *   0x00154300 change an item count (eax item, ebx change)
  *   0x001E2EB0 absorb essence                      0x00033B50 apply an action
  *
+ * Ryu's action is the byte at 0x4968B4 (the first player's block 0x4968B0 + 4; 0xB9 the
+ * Ultimate Technique charge, src/ut_charge.c). The hook also compares it on every function
+ * entry: a change is logged as a line with function "action", eax the old value, ecx the
+ * new one, return the function entered last before the change (the writer, or the one
+ * it returned to) and edx the function being entered now.
+ *
  * One line a call: frame, seconds, function, return address, eax ecx edx ebx
  * esi edi, four stack arguments, Ryu's x y z, buttons (hex wButtons, then the
  * 8 analog buttons). Lines starting "#" are markers and notes.
@@ -41,6 +47,7 @@
 
 #define ACT_VA_LIMIT 0x00E00000u
 #define ACT_MAX 64
+#define ACTION_BYTE 0x4968B4u
 
 extern uint32_t g_recomp_capture_va;
 extern void (*volatile g_recomp_entry_hook)(uint32_t va);
@@ -52,6 +59,8 @@ static FILE *s_log;
 static uint32_t s_frame;
 static uint64_t s_start_us;
 static int s_set_capture;
+static uint32_t s_last_va;                /* the function entered last */
+static uint32_t s_action;                 /* Ryu's action byte as last seen */
 static volatile int s_busy;               /* the hook writing a line (several guest threads) */
 
 static uint64_t now_us(void)
@@ -95,9 +104,32 @@ static void watch_init(void)
     }
 }
 
+static void line_head(const char *what, uint32_t ret, uint32_t a, uint32_t c, uint32_t d)
+{
+    const unsigned char *p = ngb_rec_pad;
+    fprintf(s_log, "%u\t%.3f\t%s\t%08X\t%08X\t%08X\t%08X\t0\t0\t0\t0\t0\t0\t0"
+                   "\t%.2f\t%.2f\t%.2f\t%02X%02X\t%02X%02X%02X%02X%02X%02X%02X%02X\n",
+            s_frame, (now_us() - s_start_us) / 1e6, what, ret, a, c, d,
+            MEMF(0x4B5710), MEMF(0x4B5714), MEMF(0x4B5718), p[1], p[0],
+            p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9]);
+}
+
 static void act_hook(uint32_t va)
 {
-    if (va >= ACT_VA_LIMIT || !(s_watch[va >> 3] & (1u << (va & 7))) || !s_log)
+    if (!s_log)
+        return;
+    uint32_t now = MEM8(ACTION_BYTE);
+    if (now != s_action) {
+        while (__atomic_exchange_n(&s_busy, 1, __ATOMIC_ACQUIRE))
+            ;
+        if (now != s_action) {
+            line_head("action", s_last_va, s_action, now, va);
+            s_action = now;
+        }
+        __atomic_store_n(&s_busy, 0, __ATOMIC_RELEASE);
+    }
+    s_last_va = va;
+    if (va >= ACT_VA_LIMIT || !(s_watch[va >> 3] & (1u << (va & 7))))
         return;
     while (__atomic_exchange_n(&s_busy, 1, __ATOMIC_ACQUIRE))
         ;
@@ -129,6 +161,7 @@ static void act_start(void)
                    "\tx\ty\tz\tbuttons\tanalog\n");
     s_frame = 0;
     s_start_us = now_us();
+    s_action = MEM8(ACTION_BYTE);
     g_recomp_entry_hook = act_hook;
     if (!g_recomp_capture_va) {
         g_recomp_capture_va = 1;
