@@ -22,6 +22,11 @@ find_package(SDL2 REQUIRED)
 find_package(glslang CONFIG QUIET)
 if(TARGET glslang::glslang AND TARGET glslang::glslang-default-resource-limits)
     set(NV2A_GLSLANG glslang::glslang glslang::glslang-default-resource-limits)
+    # Ubuntu glslang package: its SPIRV-Tools-opt needs core SPIRV-Tools linked after it.
+    find_package(SPIRV-Tools CONFIG QUIET)
+    if(TARGET SPIRV-Tools-static)
+        list(APPEND NV2A_GLSLANG SPIRV-Tools-static)
+    endif()
 else()
     find_library(GLSLANG_LIB NAMES libglslang.a glslang REQUIRED)
     find_library(GLSLANG_RL_LIB NAMES libglslang-default-resource-limits.a

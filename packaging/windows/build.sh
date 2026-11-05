@@ -49,7 +49,7 @@ cmake -S "$repo" -B "$out/build" -G Ninja \
     -DXBOXRECOMP_DIR="$(cd "${XBOXRECOMP_DIR:-$repo/xboxrecomp}" && pwd)" \
     -DNGB_WIN_DEPS="$deps" -DCMAKE_BUILD_TYPE=Release >"$out/configure.log"
 # The arcade Ninja Gaiden (English and Japanese) the game hands over to (#18): built when generated.
-arcade=$(ninja -C "$out/build" -t targets all | grep -oE '^ninja_(trilogy|tomoe):' | tr -d : | tr '\n' ' ')
+arcade=$(ninja -C "$out/build" -t targets all | grep -oE '^ninja_(trilogy|tomoe):' | tr -d : | tr '\n' ' ' || true)
 ninja -C "$out/build" -j"${JOBS:-$(nproc)}" ninja_gaiden_black $arcade >"$out/build.log"
 
 pkg=$out/NinjaGaidenBlack
