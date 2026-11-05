@@ -275,6 +275,8 @@ static void mw_frame(void)
     static int started;
     if (!started) {
         started = 1;
+        if (!getenv("NGB_MOVE_TRACE"))   /* runs on every function call: slows the game a lot */
+            return;
         g_recomp_entry_hook = mw_hook;
         if (!g_recomp_capture_va)
             g_recomp_capture_va = 1;
@@ -336,6 +338,7 @@ static void ol_frame(void)
         fprintf(f, "] hb %u hp %u bar %04X pos %.1f %.1f %.1f head",
                 hb, MEM16(blk + 0x1C6), MEM16(o + 0x2774), MEMF(o + 0x8C0), MEMF(o + 0x8C4), MEMF(o + 0x8C8));
         for (int k = 0; k < 16; k += 4) fprintf(f, " %08X", MEM32(o + k));
+        fprintf(f, " var %04X %04X %04X %04X %02X %02X %02X", MEM16(o + 0x277A), MEM16(o + 0x277C), MEM16(o + 0x2782), MEM16(o + 0x2786), MEM8(o + 0x278E), MEM8(o + 0x2791), MEM8(o + 0x2794));
         fputc('\n', f);
     }
     fclose(f);
