@@ -209,3 +209,58 @@ void ngb_action_frame(int toggle, int marker)
     if (now_us() - s_start_us > 15u * 60u * 1000000u)   /* 15 minutes at most */
         act_stop();
 }
+
+/* ---- NGB_SHOW_ACTION=1: Ryu's action in the window title (for checking the names in
+ * docs/function_map.md). The game thread notes each change once a frame; the window
+ * code (src/ingame_menu.c) shows it. ---- */
+
+static const struct { uint8_t action; const char *name; } k_guess[] = {
+    { 0x00, "neutral" }, { 0x06, "idle" }, { 0x26, "run start" }, { 0x28, "running" },
+    { 0x2A, "run stop" }, { 0x0B, "light attack" }, { 0x4E, "combo" }, { 0x5B, "heavy attack" },
+    { 0x46, "guard" }, { 0x47, "guard held" }, { 0x22, "roll" }, { 0x56, "jump" },
+    { 0x57, "running jump" }, { 0x5F, "air move" }, { 0x61, "in the air" }, { 0xFF, "none" },
+    { 0xB9, "UT charge" },
+};
+
+static volatile uint32_t s_shown[3] = { 0x100, 0x100, 0x100 };   /* newest first; 0x100 = none yet */
+static volatile uint32_t s_shown_serial;
+
+static const char *guess_name(uint32_t a)
+{
+    for (size_t i = 0; i < sizeof k_guess / sizeof k_guess[0]; i++)
+        if (k_guess[i].action == a)
+            return k_guess[i].name;
+    return "?";
+}
+
+int ngb_show_action(void)
+{
+    static int on = -1;
+    if (on < 0)
+        on = getenv("NGB_SHOW_ACTION") != NULL;
+    return on;
+}
+
+/* Once a frame on the game's thread (src/func_recorder.c). */
+void ngb_action_watch_frame(void)
+{
+    if (!ngb_show_action())
+        return;
+    uint32_t now = MEM8(ACTION_BYTE);
+    if (now != s_shown[0]) {
+        s_shown[2] = s_shown[1];
+        s_shown[1] = s_shown[0];
+        s_shown[0] = now;
+        s_shown_serial++;
+    }
+}
+
+/* The title text, and a number that changes with it (the window code updates on a change). */
+uint32_t ngb_action_title(char *out, size_t n)
+{
+    int len = snprintf(out, n, "Ryu action 0x%02X %s", s_shown[0] & 0xFF, guess_name(s_shown[0]));
+    for (int i = 1; i < 3 && len > 0 && (size_t)len < n; i++)
+        if (s_shown[i] != 0x100)
+            len += snprintf(out + len, n - len, "  <  0x%02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
+    return s_shown_serial;
+}

@@ -179,6 +179,7 @@ static void rec_write_frame(int marker)
 /* Once a frame, on the game's thread (src/cheats.c, ngb_frame_tick). */
 void ngb_rec_frame(void)
 {
+    { extern void ngb_action_watch_frame(void); ngb_action_watch_frame(); }   /* src/action_log.c: NGB_SHOW_ACTION */
     static int autostart_checked;            /* NGB_REC_AUTOSTART=1: debugging, record from the first frame */
     if (!autostart_checked) {
         autostart_checked = 1;
