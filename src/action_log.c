@@ -227,6 +227,7 @@ static const struct { uint8_t action; const char *name; } k_guess[] = {
 static volatile uint32_t s_shown[SHOWN_N] = { 0x100, 0x100, 0x100, 0x100, 0x100,
                                               0x100, 0x100, 0x100, 0x100, 0x100 };   /* newest first; 0x100 = none yet */
 static volatile uint32_t s_shown_serial;
+static volatile uint32_t s_title_move = ~0u, s_title_anim = ~0u;   /* set on the game thread */
 
 static const char *guess_name(uint32_t a)
 {
@@ -255,11 +256,11 @@ void ngb_action_watch_frame(void)
         return;
     uint32_t now = MEM8(ACTION_BYTE);
     mf_frame(now, now != s_shown[0]);
-    {
-        static uint32_t last_move = ~0u;
+    {   /* the title is made on the window thread: it reads these, never guest memory */
         uint32_t mv = MEM16(MOVE_FIELD);
-        if (mv != last_move) {
-            last_move = mv;
+        if (mv != s_title_move) {
+            s_title_move = mv;
+            s_title_anim = mf_anim(mv);
             s_shown_serial++;
         }
     }
@@ -274,9 +275,11 @@ void ngb_action_watch_frame(void)
 /* The title text, and a number that changes with it (the window code updates on a change). */
 uint32_t ngb_action_title(char *out, size_t n)
 {
-    uint32_t mv = MEM16(MOVE_FIELD), an = mf_anim(mv);
+    uint32_t mv = s_title_move, an = s_title_anim;
     int len;
-    if (an == ~0u)
+    if (mv == ~0u)
+        len = snprintf(out, n, "action 0x%02X %s", s_shown[0] & 0xFF, guess_name(s_shown[0]));
+    else if (an == ~0u)
         len = snprintf(out, n, "move %03X | action 0x%02X %s", mv, s_shown[0] & 0xFF, guess_name(s_shown[0]));
     else
         len = snprintf(out, n, "move %03X anim %s%u | action 0x%02X %s", mv, an < 10000 ? "ryu:" : "weapon:",
