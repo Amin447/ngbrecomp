@@ -29,6 +29,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 
 #include "xbox_memory_layout.h"
 #include "my_mods.h"
@@ -257,9 +262,32 @@ uint16_t mymod_move_pick(uint16_t move)
  * The spawn functions (sub_00153100, sub_002CD040, sub_002F2CC0; generated code edited by
  * tools/patch_enemy_pick.py) read the type through here. The new type's data must be loaded in
  * that area: swap between enemies of the same chapter. */
+/* NGB_SPAWN_LOG=1: every type read by the spawn functions goes to recordings/spawns.txt with
+ * the frame number and Ryu's position (when it is read during startup, the frame is 0). */
+unsigned mymod_frames;
 uint16_t mymod_enemy_pick(uint16_t type)
 {
     load_options();
+    static int log = -1;
+    if (log < 0)
+        log = getenv("NGB_SPAWN_LOG") != NULL;
+    if (log) {
+        static FILE *f;
+        if (!f) {
+#ifdef _WIN32
+            _mkdir("recordings");
+#else
+            mkdir("recordings", 0755);
+#endif
+            f = fopen("recordings/spawns.txt", "w");
+        }
+        if (f) {
+            fprintf(f, "frame %6u type %04X ryu %.1f %.1f %.1f
+", mymod_frames, type,
+                    MEMF(0x4B5710), MEMF(0x4B5714), MEMF(0x4B5718));
+            fflush(f);
+        }
+    }
     for (int k = 0; k < s_neswap; k++)
         if (type == s_eswap_from[k])
             return s_eswap_to[k];
@@ -269,6 +297,7 @@ uint16_t mymod_enemy_pick(uint16_t type)
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
 void mymod_frame(void)
 {
+    mymod_frames++;
     load_options();
     if (!s_nswap)
         return;
