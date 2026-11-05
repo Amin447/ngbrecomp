@@ -351,6 +351,7 @@ static struct { char name[16]; uint32_t va, len; } s_tn_read[TN_READS];
 static volatile uint32_t s_tn_n;
 static void (*s_tn_prev)(const char *, uint64_t, size_t);
 static char s_tn_type[0x400][16];
+static unsigned char s_td_done[0x400];
 
 static void tn_read_hook(const char *path, uint64_t off, size_t len)
 {
@@ -390,6 +391,21 @@ static void tn_frame(void)
         uint32_t t = MEM16(o + 0x2774);
         if (!cd || t >= 0x400 || s_tn_type[t][0])
             continue;
+        if (!s_td_done[t]) {               /* its data's first bytes, matched to the archives offline */
+            s_td_done[t] = 1;
+            make_dir("recordings");
+            FILE *g = fopen("recordings/typedata.txt", "a");
+            if (g) {
+                fprintf(g, "type %04X data %08X:", t, cd);
+                for (int q = 0; q < 128; q++) fprintf(g, "%02X", MEM8(cd + q));
+                uint32_t p2 = MEM32(cd);         /* in case it is a pointer to the data */
+                fprintf(g, " first %08X:", p2);
+                if (p2 >= 0x10000)
+                    for (int q = 0; q < 64; q++) fprintf(g, "%02X", MEM8(p2 + q));
+                fputc('\n', g);
+                fclose(g);
+            }
+        }
         uint32_t n = s_tn_n, lo = n > TN_READS ? n - TN_READS : 0;
         for (uint32_t k = n; k-- > lo;) {
             uint32_t j = k % TN_READS;
