@@ -287,6 +287,10 @@ uint16_t mymod_enemy_pick(uint16_t type)
             fflush(f);
         }
     }
+    /* Not at boot: the game reads some types then (a swap there gave a disc error). Only once
+     * Ryu stands in a level (his position is no longer 0, 0, 0). */
+    if (MEMF(0x4B5710) == 0.0f && MEMF(0x4B5714) == 0.0f && MEMF(0x4B5718) == 0.0f)
+        return type;
     for (int k = 0; k < s_neswap; k++)
         if (type == s_eswap_from[k])
             return s_eswap_to[k];
