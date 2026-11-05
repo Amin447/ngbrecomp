@@ -1261,6 +1261,24 @@ void nv2a_window_event_hook(const void *sdl_event)
         extern volatile int ngb_trace_request;   /* src/d3d/vk/backend.cpp: record the next frames */
         ngb_trace_request = 1;
     }
+    {   /* src/func_recorder.c: F9 starts or stops a recording, F6 marks a moment in it */
+        extern volatile int ngb_rec_toggle_request, ngb_rec_marker_request, ngb_rec_active;
+        static char base_title[256];
+        static int shown = -1;
+        if (ev->type == SDL_KEYDOWN && !ev->key.repeat && ev->key.keysym.sym == SDLK_F9)
+            ngb_rec_toggle_request = 1;
+        if (ev->type == SDL_KEYDOWN && !ev->key.repeat && ev->key.keysym.sym == SDLK_F6 && ngb_rec_active)
+            ngb_rec_marker_request = 1;
+        SDL_Window *w = SDL_GetKeyboardFocus();
+        if (w && shown != ngb_rec_active) {
+            if (!base_title[0])
+                snprintf(base_title, sizeof base_title, "%s", SDL_GetWindowTitle(w));
+            char t[300];
+            snprintf(t, sizeof t, "%s%s", ngb_rec_active ? "[REC] " : "", base_title);
+            SDL_SetWindowTitle(w, t);
+            shown = ngb_rec_active;
+        }
+    }
     if (ev->type == SDL_KEYDOWN && ev->key.keysym.sym == SDLK_F8 && !ev->key.repeat) {
         extern volatile int ngb_pos_request;   /* src/cheats.c: Ryu's position to a file (debugging) */
         ngb_pos_request = 1;

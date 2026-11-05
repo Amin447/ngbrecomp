@@ -44,6 +44,8 @@ typedef void (*recomp_func_t)(void);
 extern recomp_func_t recomp_lookup(uint32_t va);
 
 uint32_t g_recomp_capture_va;
+/* Called first on every entry while g_recomp_capture_va is set (src/func_recorder.c). */
+void (*volatile g_recomp_entry_hook)(uint32_t va);
 volatile int g_recomp_capture_busy;   /* interrupts held while set */
 static uint64_t s_after_ms, s_start_ms;
 #define CAP_MAX 256
@@ -206,6 +208,10 @@ int recomp_capture_entry(uint32_t va)
     recomp_func_t fn;
     int idx = -1;
 
+    if (g_recomp_entry_hook) {
+        g_recomp_entry_hook(va);
+        return 0;
+    }
     if (s_cover_file) {
         cover_entry(va);
         return 0;
