@@ -893,7 +893,7 @@ static void hold_back_reset(DWORD port)   /* (the remap stepped aside: none of i
     memset(s_hb_back[i], 0, sizeof s_hb_back[i]);
 }
 
-void xbox_pad_remap(XBOX_INPUT_STATE *st, DWORD port)
+static void pad_remap(XBOX_INPUT_STATE *st, DWORD port)
 {
     if (ngb_quick_frozen()) {
         memset(&st->Gamepad, 0, sizeof st->Gamepad);
@@ -1100,4 +1100,15 @@ int ngb_bind_event(const SDL_Event *ev)
         return 1;
     }
     return ev->type == SDL_KEYUP || ev->type == SDL_MOUSEBUTTONUP || ev->type == SDL_MOUSEWHEEL;
+}
+
+/* The first controller as the game gets it, for the function recorder (src/func_recorder.c). */
+unsigned char ngb_rec_pad[32];
+
+void xbox_pad_remap(XBOX_INPUT_STATE *st, DWORD port)
+{
+    pad_remap(st, port);
+    if (port == 0)
+        memcpy(ngb_rec_pad, &st->Gamepad, sizeof st->Gamepad < sizeof ngb_rec_pad ? sizeof st->Gamepad
+                                                                                : sizeof ngb_rec_pad);
 }
