@@ -185,6 +185,16 @@ void ngb_rec_frame(void)
         if (getenv("NGB_REC_AUTOSTART"))
             ngb_rec_toggle_request = 1;
     }
+    {   /* NGB_REC_MODE=actions: F9 and F6 drive the action log instead (src/action_log.c) */
+        extern int ngb_action_mode(void);
+        extern void ngb_action_frame(int toggle, int marker);
+        if (ngb_action_mode()) {
+            int toggle = ngb_rec_toggle_request, marker = ngb_rec_marker_request;
+            ngb_rec_toggle_request = ngb_rec_marker_request = 0;
+            ngb_action_frame(toggle, marker);
+            return;
+        }
+    }
     if (ngb_rec_toggle_request) {
         ngb_rec_toggle_request = 0;
         if (s_file) rec_stop();
