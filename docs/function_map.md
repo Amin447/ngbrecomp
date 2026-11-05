@@ -141,6 +141,8 @@ what Ryu plays.
 
 **Enemy variants:** the type alone does not tell kinds apart. SWAT soldiers (type 0x005C, chapters 4-5) come in three kinds by object + 0x277A = 0, 1 (shield), 2, with + 0x2791 = 0x81 + that number; both are copied from the spawn record (+0x52, +0x5B) and stay the same. + 0x277C changes while the enemy acts (it is the command the move picker reads), so it is not a variant. Chapter 5's ninjas are type 0x006B, which uses genin.chr like the chapter 1 Genin (0x000E): two types can share one model.
 
+**What does not change a SWAT soldier (tested in game):** setting its kind (+0x277A, with +0x2791) or swapping its weapon objects' types (0x135 knife, 0x137 gun, 0x139 grenade, 0x13B shield; they are objects of their own) changes only those numbers. The look and fighting come from data set when the soldier and its weapons are made.
+
 ## Memory
 
 | Address | What | Source |
