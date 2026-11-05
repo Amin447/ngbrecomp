@@ -226,67 +226,24 @@ static void mtn_apply(uint32_t base)
 /* ---- Move swaps (move_swap=FROM:TO) ----
  *
  * The game picks Ryu's next move by choosing one of his move records in ryu.chr (sub_00034A10,
- * called from sub_000345F0, which writes record + 2 to his current move at object + 0x2788).
- * Records are 12 bytes: u16 condition, u16 move, u16 0, u8 action, u8 flags, u32 0. The loaded
- * file ("chr_dat2", 0x3F700 bytes, 5 sections) is found by its header; every record holding FROM
- * gets TO. */
-
-#define CHR_SIZE 0x3F700u
-static uint32_t s_chr;
-
-static int chr_at(uint32_t va)
+ * called from sub_000345F0, which writes the record's move to his current move at object +
+ * 0x2788). Editing the loaded ryu.chr made the game report a disc error, so instead the
+ * generated sub_000345F0 (src/recomp/gen/recomp_0001.c, edited by hand: redo it after a
+ * regeneration) passes the move it read through here. It runs for every character that uses
+ * this code, so only the moves listed change. */
+uint16_t mymod_move_pick(uint16_t move)
 {
-    return MEM32(va) == 0x5F726863u /* "chr_" */ && MEM32(va + 4) == 0x32746164u /* "dat2" */
-        && MEM32(va + 0x0C) == CHR_SIZE && MEM32(va + 0x10) == 5;
-}
-
-static uint32_t chr_find(void)
-{
-    static const uint32_t ranges[][2] = { { 0x00010000u, 0x04000000u }, { 0x80000000u, 0x88000000u } };
-    for (int r = 0; r < 2; r++)
-        for (uint32_t va = ranges[r][0]; va < ranges[r][1] - 0x20; va += 0x10)
-            if (chr_at(va))
-                return va;
-    return 0;
-}
-
-static void chr_apply(uint32_t base)
-{
-    int changed = 0;
-    for (uint32_t va = base + 0x20; va + 12 <= base + CHR_SIZE; va += 4) {
-        if (MEM16(va + 4) != 0 || MEM32(va + 8) != 0 || MEM8(va + 7) > 2)
-            continue;
-        uint16_t mv = MEM16(va + 2);
-        for (int k = 0; k < s_nmswap; k++)
-            if (mv == s_mswap_from[k]) {
-                MEM16(va + 2) = s_mswap_to[k];
-                changed++;
-                break;
-            }
-    }
-    fprintf(stderr, "[MOD] ryu.chr at %08X: %d move records swapped\n", base, changed);
-}
-
-static void chr_frame(void)
-{
-    static unsigned tick;
-    if (!s_nmswap || (s_chr && chr_at(s_chr)))
-        return;
-    s_chr = 0;
-    if (++tick % 120)
-        return;
-    uint32_t va = chr_find();
-    if (va) {
-        chr_apply(va);
-        s_chr = va;
-    }
+    load_options();
+    for (int k = 0; k < s_nmswap; k++)
+        if (move == s_mswap_from[k])
+            return s_mswap_to[k];
+    return move;
 }
 
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
 void mymod_frame(void)
 {
     load_options();
-    chr_frame();
     if (!s_nswap)
         return;
     static unsigned tick;
