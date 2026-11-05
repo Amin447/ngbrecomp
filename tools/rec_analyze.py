@@ -55,6 +55,15 @@ def load(path):
 
 def load_names(root):
     names = {}
+    static = root / "docs" / "static_map.tsv"      # tools/static_names.py: names, areas and tags
+    if static.exists():
+        for line in static.read_text(encoding="utf-8").splitlines()[1:]:
+            col = line.split("\t")
+            if len(col) < 6:
+                continue
+            label = col[2] or (col[4] and f"[{col[4]}]") or (col[5] and f"[{col[5][:40]}]")
+            if label:
+                names[int(col[0][4:], 16)] = label
     p = root / "docs" / "function_map.md"
     if p.exists():
         for line in p.read_text(encoding="utf-8").splitlines():
