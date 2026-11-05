@@ -66,7 +66,7 @@ evidence), *guess*.
 | sub_0001B3C0 | move-script input test for the roll | guess | round 4 | Only while rolling; called by the move script sub_00016300; calls the button helper sub_0001B5D0 |
 | sub_00032D30 | guard press handling | guess | round 4 | Right after a guard press (phi 0.32); reads 0xDB9F84; called by sub_00032A50 |
 | sub_0001B5D0 | button test helper | guess | rounds 3-4 | Called by move-script tests sub_0001B3C0 and others |
-| sub_0003C3D0 | set an object's action (command) | likely | action log 2 | Every change of Ryu's action byte 0x4968B4 happened inside it (250 of 250 bar 4). Callers pass a small command code 0x00-0x10 (59 call sites), not the action number: the action comes from data |
+| sub_0003C3D0 | look up an object's command entry | likely | action log 2, code | Takes an object (edi) and a command 0x00-0x10; returns entry [command] of the table in the object's character data (object+0x26D8 -> data, data+[data+0x18] -> section list, its 5th section), or of an override table at 0x421CF8 by object type (+0x2774). The action byte is written by its callers right after |
 
 
 ## Ryu's actions (0x4968B4)
@@ -95,11 +95,33 @@ seen for the named rows, though not every move was checked one by one. Unnamed r
 | 0x02, 0x08-0x0A, 0x0E, 0x16, 0x24, 0x2D, 0x30, 0x32, 0x4F, 0x67, 0x86, 0x8A | 1-5 | | | unknown (hit reactions, landings, wall moves?) |
 | 0xB9 | | | X held | Ultimate Technique charge (src/ut_charge.c) |
 
+
+## From action to animation
+
+How an action number reaches an animation, from Ryu's data files (`tools/ryu_moves.py`):
+
+1. **Ryu's character data** (`ryu.chr`, cmn.afs #141, magic `chr_dat2`) is at `*(0x4B4E50 + 0x26D8)` =
+   `*0x4B7528` while playing. It has 5 sections; the 5th starts with a 17-entry command table
+   (commands 0x00-0x10, the values callers pass to sub_0003C3D0).
+2. **Move records**, 12 bytes: `u16 condition, u16 move, u16 0, u8 kind, u8 flags, u32 0`. *kind* is
+   the action number (0x4968B4): the values match the ones seen while playing. 101 different actions,
+   about 6800 records.
+3. **Moves** (`ryu.mtn`, cmn.afs #22, magic `chr_dat`), section 1: 2296 entries, each `u16 3, u16
+   animation id`, then a small script (timing, effects; not decoded yet).
+4. **Animation ids** are decimal: below 10000, clip N of Ryu's own motions (`ryu.mtn` section 0, 1890
+   slots, 1601 of 1637 such ids filled); 10000 + N, clip N of the weapon's motion file (`rm_kt.mot`,
+   cmn.afs #6, for the Dragon Sword; ids empty there most likely belong to other weapons' files).
+
+Example: action 0x0B (light attack) has 203 records; move 0x190 plays weapon clip 160 (id 10160).
+Swapping a move's animation id, or a record's move, is the way to change which animation an action
+plays.
+
 ## Memory
 
 | Address | What | Source |
 |---|---|---|
 | 0x4B4E50 | Ryu's object (objects 0x2800 apart) | src/cheats.c |
+| 0x4B7528 | pointer to Ryu's character data (ryu.chr, chr_dat2) = object + 0x26D8 | src/intercept.c, sub_0003C3D0 |
 | 0x4B5710 | Ryu's position x y z | src/cheats.c |
 | 0x58A520 | Ryu's player block (0x210 a player) | src/cheats.c |
 | 0x58A564 / 0x58A566 | Ryu's max health / health | src/cheats.c |

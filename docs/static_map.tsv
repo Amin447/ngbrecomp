@@ -539,7 +539,7 @@ sub_0003BF16	186					0	0
 sub_0003BFD0	675					8	5	
 sub_0003C280	144					9	5	
 sub_0003C310	178					6	2	
-sub_0003C3D0	174	set an object's action (command)	map:likely			49	3	
+sub_0003C3D0	174	look up an object's command entry	map:likely			49	3	
 sub_0003C480	73					1	0	
 sub_0003C4D0	67					2	0	
 sub_0003C520	714					1	1	
