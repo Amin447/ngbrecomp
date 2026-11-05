@@ -22,7 +22,7 @@ VERSION = 1
 DIGITAL = ["dpad up", "dpad down", "dpad left", "dpad right", "start", "back",
            "left stick click", "right stick click"]
 ANALOG = ["A (jump)", "B (projectile)", "X (attack)", "Y (heavy attack)", "Black", "White",
-          "LT", "RT (guard)"]
+          "LT (guard)", "RT (center camera)"]
 
 
 def load(path):
@@ -192,6 +192,9 @@ def cmd_buttons(frames, names, top):
         near = [int(any(press[max(0, k - 1):k + 6])) for k in range(len(press))]
         if sum(press) >= 2:
             follow(frames, near, names, top, f"{name}: the frames just after a press ({sum(press)} presses)")
+            print()
+        if 3 <= sum(held) <= len(held) - 3:
+            follow(frames, held, names, top, f"{name} held")
             print()
 
 

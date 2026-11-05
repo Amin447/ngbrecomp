@@ -50,7 +50,7 @@ evidence), *guess*.
 | sub_001963B0 | Ryu airborne update | likely | round 2 | Runs exactly while Ryu is in the air (phi 1.00); 89 float accesses, no constant gravity in the code -- comes from data |
 | sub_001999B0 | Ryu ground/landing update | likely | rounds 1-2 | Strongest on the 3 frames after landing; also while running |
 | sub_00025310 | player control (stick and buttons to movement) | likely | rounds 1-2 | Calls turning sub_0002C390 and jump start sub_0002BDD0 |
-| sub_0002BDD0 | jump start (take-off) | likely | round 2 | Strongest in the frames just before leaving the ground; reads [0xDB9E9C] |
+| sub_0002BDD0 | start an evasive move (jump or roll) | likely | rounds 2, 4 | Just before take-off in round 2; also in 54% of roll frames in round 4; called by player control sub_00025310 |
 | sub_00020F20 | move-script op used in the air | guess | round 2 | Called from the script op table at 0x00020040+; reads [0xDB9E9C] |
 | sub_0003B870 | move-script op used in the air | guess | round 2 | Same op table |
 | sub_001BE1D0 | landing / ground contact check | guess | round 2 | On landing; reads Ryu's object, health block and event number |
@@ -63,6 +63,9 @@ evidence), *guess*.
 | sub_000303A0 | attack input / combo buffer check | guess | round 3 | Reads 0xDB9F84; called by the button helper sub_0001B6D0 |
 | sub_001A4580 | audio middleware (very frequent) | guess | round 3 | 7 lines, ~100 calls a frame during heavy attacks; called from the 0x0031F930-0x00330E70 library code |
 | sub_00346800 | audio middleware | guess | round 3 | Same pattern; 0x0034xxxx is the CRI library area (see sub_00344BE0) |
+| sub_0001B3C0 | move-script input test for the roll | guess | round 4 | Only while rolling; called by the move script sub_00016300; calls the button helper sub_0001B5D0 |
+| sub_00032D30 | guard press handling | guess | round 4 | Right after a guard press (phi 0.32); reads 0xDB9F84; called by sub_00032A50 |
+| sub_0001B5D0 | button test helper | guess | rounds 3-4 | Called by move-script tests sub_0001B3C0 and others |
 
 ## Memory
 
@@ -83,7 +86,7 @@ evidence), *guess*.
 | 0x5895E2 / E4 | UT charge level / frame count | src/ut_charge.c |
 | 0xDB9E9C | pointer to the active character's control block (angles at +0x78C, +0x2D0, +0x2D4) | round 1 |
 | 0x00020040 | move-script op table (consecutive entries are script commands) | round 2 |
-| 0xDB9F84 | attack input / combo state | round 3 |
+| 0xDB9F84 | action input state (attacks, guard) | rounds 3-4 |
 
 ## Sessions
 
@@ -92,3 +95,4 @@ evidence), *guess*.
 | 2026-11-05 | rec_20261105_170913.bin | 1: still / run / still / run (F6 between) | 101 functions only while running; Ryu update sub_000FF1A0, turning sub_0002C390. Recording ran at ~17 fps |
 | 2026-11-05 | rec_20261105_171515.bin | 2: still / jump in place / still / jump | 8 jumps, 36 frames airborne each, height 2.32 (y up). Airborne sub_001963B0, take-off sub_0002BDD0, landing sub_001999B0 |
 | 2026-11-05 | rec_20261105_172113.bin | 3: still / X light / still / Y heavy | Shared attack path sub_00039870 -> sub_00033B50; heavy attacks drive much more audio library work. Controller data was missing in rounds 1-3 (wrong address); fixed for round 4 |
+| 2026-11-05 | rec_20261105_173623.bin | 4: still / guard / still / roll | First recording with controller data (guard = LT/Shift). Guard adds almost no functions: it is a state change, needs a memory diff. Roll shares the jump start sub_0002BDD0; roll-only sub_0001B3C0 |
