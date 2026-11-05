@@ -79,7 +79,7 @@ seen for the named rows, though not every move was checked one by one. Unnamed r
 |---|---|---|---|---|
 | 0x00 | 39 | FF, 2A, 0B | none | neutral / back to idle |
 | 0x06 | 27 | 00, 2A | none | standing idle |
-| 0x08 | 1 | 06 | stick (slow) | start walking (Ryu's animation 82; seen live: 00 > 06 > 08 > 09) |
+| 0x08 | 1 | 06, 00 | stick (slow), or after an attack | back to free movement (after starting a walk, and after X or Y taps; Ryu's animation 82) |
 | 0x09 | 1 | 08 | stick (slow) | walking (Ryu's animation 3) |
 | 0x0A | 4 | 09 | none | stop walking (Ryu's animations 4, 5); then 0x00 (seen live) |
 | 0x26 | 40 | 06, 2A | none | start running |
@@ -127,11 +127,14 @@ running jump to play animation 80, and only the running jump. So the chain above
 move record -> move -> animation id, and changing a move's animation id in the loaded ryu.mtn changes
 what Ryu plays.
 
+**Current move:** the u16 at Ryu's object + 0x2788 (0x4B75D8) is the move playing now; it matched the known move in 12 of 12 jumps. Attacks do not show in the action byte (it reads 0xFF or 0x08 around them), so the move number is how to tell attacks apart.
+
 ## Memory
 
 | Address | What | Source |
 |---|---|---|
 | 0x4B4E50 | Ryu's object (objects 0x2800 apart) | src/cheats.c |
+| 0x4B75D8 | Ryu's current move (u16, object + 0x2788; ryu.mtn move number). +0x278A and +0x278C held the same value in every jump: related copies (previous / requested?) | jump test, move_field.txt |
 | 0x4B7528 | pointer to Ryu's character data (ryu.chr, chr_dat2) = object + 0x26D8 | src/intercept.c, sub_0003C3D0 |
 | 0x4B5710 | Ryu's position x y z | src/cheats.c |
 | 0x58A520 | Ryu's player block (0x210 a player) | src/cheats.c |
