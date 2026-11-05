@@ -251,7 +251,8 @@ static uint32_t s_mw_ring[MW_RING], s_mw_pos, s_mw_last = ~0u;
 static struct { uint32_t from, to, va[MW_RING]; } s_mw_log[MW_LOG];
 static volatile uint32_t s_mw_n, s_mw_done;
 
-extern volatile uint32_t ngb_last_hit_type;
+extern volatile uint32_t ngb_last_hit_type, ngb_last_hit_obj;
+static char s_hit_var[64];   /* the hit object's spawn fields, set on the game thread */
 static void mw_hook(uint32_t va)
 {
     uint32_t mv = MEM16(MOVE_FIELD);
@@ -448,6 +449,10 @@ void ngb_action_watch_frame(void)
         static uint32_t s_title_hit = ~0u;
         if (ngb_last_hit_type != s_title_hit) {
             s_title_hit = ngb_last_hit_type;
+            uint32_t o = ngb_last_hit_obj;
+            snprintf(s_hit_var, sizeof s_hit_var, " v %04X %04X %04X %04X %02X %02X %02X",
+                     MEM16(o + 0x277A), MEM16(o + 0x277C), MEM16(o + 0x2782), MEM16(o + 0x2786),
+                     MEM8(o + 0x278E), MEM8(o + 0x2791), MEM8(o + 0x2794));
             s_shown_serial++;
         }
     }
@@ -484,7 +489,7 @@ uint32_t ngb_action_title(char *out, size_t n)
         len = snprintf(out, n, "move %03X anim %s%u | action 0x%02X %s", mv, an < 10000 ? "ryu:" : "weapon:",
                        an < 10000 ? an : an - 10000, s_shown[0] & 0xFF, guess_name(s_shown[0]));
     if (ngb_last_hit_type != ~0u && len > 0 && (size_t)len < n)
-        len += snprintf(out + len, n - len, " | hit type %04X", ngb_last_hit_type);
+        len += snprintf(out + len, n - len, " | hit type %04X%s", ngb_last_hit_type, s_hit_var);
     for (int i = 1; i < SHOWN_N && len > 0 && (size_t)len < n; i++)
         if (s_shown[i] != 0x100)
             len += snprintf(out + len, n - len, " < %02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
