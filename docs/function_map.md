@@ -56,8 +56,8 @@ evidence), *guess*.
 | sub_001BE1D0 | landing / ground contact check | guess | round 2 | On landing; reads Ryu's object, health block and event number |
 | sub_00034D60 | landing helper | guess | rounds 1-2 | Called by sub_0003E4E0 and sub_00197370 |
 | sub_001CA870 | effect or sound spawn (also while running) | guess | rounds 1-2 | With sub_001CB260, on jumps and steps |
-| sub_00039870 | set Ryu's action/move | likely | round 3 | Runs on both attack types; called from many movement and attack paths; calls sub_00033B50 |
-| sub_00033B50 | apply action to Ryu's character data | likely | round 3 | Reads Ryu's object 0x4B4E50 and his character data near 0x4B75DE / 0x4B7640 |
+| sub_00039870 | query an object's state (by object number) | likely | round 3, action log | ax = object number (0 Ryu, others enemies), turned into the object by sub_00033B50; runs every frame. Round 3 called it set-action: wrong |
+| sub_00033B50 | object by number | likely | action log | ax = object number, returns the object (Ryu's at 0x4B4E50, objects 0x2800 apart) |
 | sub_00033BD0 | Ryu action helper | guess | round 3 | Called by the move script sub_00016300 and sub_0003D140 |
 | sub_0003A100 | start an attack action | guess | round 3 | Only during attacks; calls sub_00039870; called by sub_0003D140 and sub_00198D70 |
 | sub_000303A0 | attack input / combo buffer check | guess | round 3 | Reads 0xDB9F84; called by the button helper sub_0001B6D0 |
@@ -83,6 +83,9 @@ evidence), *guess*.
 | 0xDB9C6E | current event number (0xFFFF none) | src/cutscene_skip.c |
 | 0xDB9477 | watched-event flags, one byte an event | src/cutscene_skip.c |
 | 0xDB9ACC | right stick mode (0 first person, 1 camera) | src/camera.c |
+| 0x4968B0 | player blocks, 0xDD0 each (src/ut_charge.c) | src/ut_charge.c |
+| 0x4968B4 | Ryu's current action (byte; 0xB9 the UT charge) | src/ut_charge.c, sub_00023520 |
+| 0xDB9C70 | current player's object number (16-bit) | sub_00023520 |
 | 0x5895E2 / E4 | UT charge level / frame count | src/ut_charge.c |
 | 0xDB9E9C | pointer to the active character's control block (angles at +0x78C, +0x2D0, +0x2D4) | round 1 |
 | 0x00020040 | move-script op table (consecutive entries are script commands) | round 2 |

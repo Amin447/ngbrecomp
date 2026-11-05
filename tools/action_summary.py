@@ -64,6 +64,7 @@ def main():
     ap.add_argument("log")
     ap.add_argument("--func", default="sub_00039870")
     ap.add_argument("--top", type=int, default=60)
+    ap.add_argument("--changes", action="store_true", help="Ryu's action changes and who made them")
     args = ap.parse_args()
     rows = load(args.log)
     names = ra.load_names(ROOT)
@@ -72,6 +73,24 @@ def main():
     print(f"{len(rows)} calls logged:", ", ".join(f"{label(int(f[4:], 16), names)} x{n}"
                                                     for f, n in counts.most_common()))
     print()
+
+    if args.changes:
+        ch = [r for r in rows if r["function"] == "action"]
+        print(f"{len(ch)} changes of Ryu's action byte (0x4968B4). By new action:")
+        print(f"  {'action':>6} {'times':>5} {'first s':>8}  buttons (most common)          from (old)      changed in")
+        by = collections.defaultdict(list)
+        for r in ch:
+            by[int(r["ecx"], 16)].append(r)
+        for act in sorted(by):
+            rs = by[act]
+            btn = collections.Counter(buttons(r) for r in rs).most_common(2)
+            old = collections.Counter(int(r["eax"], 16) for r in rs).most_common(3)
+            who = collections.Counter(int(r["return"], 16) for r in rs).most_common(2)
+            print(f"  0x{act:02X}   {len(rs):5} {float(rs[0]['seconds']):8.1f}  "
+                  f"{', '.join(f'{b} x{n}' for b, n in btn):30} "
+                  f"{' '.join(f'{o:02X}' for o, _ in old):15} "
+                  f"{'; '.join(label(w, names) for w, _ in who)}")
+        return
 
     sel = [r for r in rows if r["function"] == args.func]
     if args.func == "sub_00039870":
