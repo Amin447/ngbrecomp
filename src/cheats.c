@@ -27,6 +27,7 @@
 #include <time.h>
 
 #include "xbox_memory_layout.h"
+#include "my_mods.h"
 
 /* A debugging option from the environment, read once (these are asked per sprite or per frame). */
 #define ENV_ONCE(name) (__extension__({ static const char *v_ = (const char *)1; \
@@ -400,7 +401,10 @@ void sub_001E1680(void)
 {
     uint32_t target = MEM32(esp + 4);
     if (!s_cheat[9] || target == 0x4B4E50 || !MEM8(target + 0x27F0)) {
+        struct mymod_hit hit;                     /* my_mods.c: damage multipliers */
+        mymod_hit_begin(&hit, target);
         damage_apply();
+        mymod_hit_end(&hit);
         return;
     }
     uint32_t block = MEM8(target + 0x27F0) * 0x210u + 0x58A3A0;

@@ -158,6 +158,7 @@ add_library(ngb_gen OBJECT ${RECOMP_GEN_SOURCES}
     # The Direct3D hooks (docs/renderer.md, tools/take_d3d.py).
     ${CMAKE_CURRENT_SOURCE_DIR}/src/d3d/d3d.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/cheats.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/my_mods.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/camera.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/d3d/d3d_hooks.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/d3d/d3d_orig.c
