@@ -215,7 +215,7 @@ void ngb_action_frame(int toggle, int marker)
  * code (src/ingame_menu.c) shows it. ---- */
 
 static const struct { uint8_t action; const char *name; } k_guess[] = {
-    { 0x00, "neutral" }, { 0x06, "idle" }, { 0x08, "walk start" }, { 0x09, "walking" }, { 0x0A, "walk stop" }, { 0x26, "run start" }, { 0x28, "running" },
+    { 0x00, "neutral" }, { 0x06, "idle" }, { 0x08, "recover / walk start" }, { 0x09, "walking" }, { 0x0A, "walk stop" }, { 0x26, "run start" }, { 0x28, "running" },
     { 0x2A, "run stop" }, { 0x0B, "light attack" }, { 0x4E, "combo" }, { 0x5B, "heavy attack" },
     { 0x46, "guard" }, { 0x47, "guard held" }, { 0x22, "roll" }, { 0x56, "running jump" },
     { 0x57, "running jump" }, { 0x58, "running jump" },
@@ -237,6 +237,8 @@ static const char *guess_name(uint32_t a)
 }
 
 static void mf_frame(uint32_t action, int changed);
+static uint32_t mf_anim(uint32_t move);
+#define MOVE_FIELD 0x4B75D8u   /* Ryu's object + 0x2788: his current move (found from jumps) */
 
 int ngb_show_action(void)
 {
@@ -253,6 +255,14 @@ void ngb_action_watch_frame(void)
         return;
     uint32_t now = MEM8(ACTION_BYTE);
     mf_frame(now, now != s_shown[0]);
+    {
+        static uint32_t last_move = ~0u;
+        uint32_t mv = MEM16(MOVE_FIELD);
+        if (mv != last_move) {
+            last_move = mv;
+            s_shown_serial++;
+        }
+    }
     if (now != s_shown[0]) {
         for (int i = SHOWN_N - 1; i > 0; i--)
             s_shown[i] = s_shown[i - 1];
@@ -264,7 +274,13 @@ void ngb_action_watch_frame(void)
 /* The title text, and a number that changes with it (the window code updates on a change). */
 uint32_t ngb_action_title(char *out, size_t n)
 {
-    int len = snprintf(out, n, "Ryu action 0x%02X %s", s_shown[0] & 0xFF, guess_name(s_shown[0]));
+    uint32_t mv = MEM16(MOVE_FIELD), an = mf_anim(mv);
+    int len;
+    if (an == ~0u)
+        len = snprintf(out, n, "move %03X | action 0x%02X %s", mv, s_shown[0] & 0xFF, guess_name(s_shown[0]));
+    else
+        len = snprintf(out, n, "move %03X anim %s%u | action 0x%02X %s", mv, an < 10000 ? "ryu:" : "weapon:",
+                       an < 10000 ? an : an - 10000, s_shown[0] & 0xFF, guess_name(s_shown[0]));
     for (int i = 1; i < SHOWN_N && len > 0 && (size_t)len < n; i++)
         if (s_shown[i] != 0x100)
             len += snprintf(out + len, n - len, " < %02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
@@ -372,4 +388,21 @@ static void mf_frame(uint32_t action, int changed)
         make_dir("recordings");
         mf_report();
     }
+}
+
+/* The animation id of a move in the loaded ryu.mtn, ~0 when not known. */
+static uint32_t mf_anim(uint32_t move)
+{
+    if (!s_mf_mtn || move >= 2296)
+        return ~0u;
+    uint32_t base = s_mf_mtn, first = MEM32(base + 0x18);
+    uint32_t s1 = MEM32(base + first + 4);
+    uint32_t sec1 = s1 < MF_MTN_SIZE ? base + s1 : s1;
+    if (sec1 < base || sec1 >= base + MF_MTN_SIZE)
+        return ~0u;
+    uint32_t e = MEM32(sec1 + 4 * move);
+    uint32_t entry = e < MF_MTN_SIZE ? sec1 + e : e;
+    if (entry < base || entry >= base + MF_MTN_SIZE || MEM16(entry) != 3)
+        return ~0u;
+    return MEM16(entry + 2);
 }
