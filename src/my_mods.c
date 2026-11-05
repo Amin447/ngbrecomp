@@ -282,8 +282,7 @@ uint16_t mymod_enemy_pick(uint16_t type)
             f = fopen("recordings/spawns.txt", "w");
         }
         if (f) {
-            fprintf(f, "frame %6u type %04X ryu %.1f %.1f %.1f
-", mymod_frames, type,
+            fprintf(f, "frame %6u type %04X ryu %.1f %.1f %.1f\n", mymod_frames, type,
                     MEMF(0x4B5710), MEMF(0x4B5714), MEMF(0x4B5718));
             fflush(f);
         }
