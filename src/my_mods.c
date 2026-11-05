@@ -15,6 +15,9 @@
  *   damage_taken=0.5   Ryu takes half damage (0 = no damage)
  *   damage_dealt=2     enemies take double damage
  *   log=1              print each scaled hit to the log
+ *   anim_swap=39:80    every move of Ryu's whose animation id is 39 plays 80 instead (up to 8
+ *                      lines; ids as in tools/ryu_moves.py: below 10000 Ryu's own clips,
+ *                      10000 + N the weapon's clip N)
  */
 #define RECOMP_GENERATED_CODE
 #include "recomp_funcs.h"
@@ -27,12 +30,22 @@
 
 static float s_taken = 1.0f, s_dealt = 1.0f;
 static int s_log;
+static uint16_t s_swap_from[8], s_swap_to[8];
+static int s_nswap;
 
 static void set_option(const char *key, const char *val)
 {
     if (!strcmp(key, "damage_taken")) s_taken = (float)atof(val);
     else if (!strcmp(key, "damage_dealt")) s_dealt = (float)atof(val);
     else if (!strcmp(key, "log")) s_log = atoi(val);
+    else if (!strcmp(key, "anim_swap") && s_nswap < 8) {
+        unsigned from, to;
+        if (sscanf(val, "%u:%u", &from, &to) == 2) {
+            s_swap_from[s_nswap] = (uint16_t)from;
+            s_swap_to[s_nswap] = (uint16_t)to;
+            s_nswap++;
+        }
+    }
     else return;
     if (s_taken < 0) s_taken = 0;
     if (s_dealt < 0) s_dealt = 0;
@@ -64,7 +77,8 @@ static void load_options(void)
     if ((e = getenv("NGB_MOD_DAMAGE_TAKEN"))) set_option("damage_taken", e);
     if ((e = getenv("NGB_MOD_DAMAGE_DEALT"))) set_option("damage_dealt", e);
     if ((e = getenv("NGB_MOD_LOG"))) set_option("log", e);
-    fprintf(stderr, "[MOD] damage taken x%.2f, damage dealt x%.2f\n", s_taken, s_dealt);
+    fprintf(stderr, "[MOD] damage taken x%.2f, damage dealt x%.2f, %d animation swaps\n",
+            s_taken, s_dealt, s_nswap);
 }
 
 static uint32_t health_block(uint32_t target)
@@ -144,4 +158,73 @@ void mymod_hit_end(struct mymod_hit *h)
     if (s_log)
         fprintf(stderr, "[MOD] %s hit: %d -> %d (health %d -> %d)\n", h->ryu ? "Ryu" : "enemy",
                 taken, want, before_sum, sum);
+}
+
+/* ---- Animation swaps (anim_swap=FROM:TO) ----
+ *
+ * Ryu's moves are ryu.mtn (cmn.afs #22, docs/function_map.md "From action to animation"): a
+ * "chr_dat" file of 0x143DA0 bytes, 3 sections; section 1 is a table of 2296 move entries, each
+ * u16 3, u16 animation id, then a script. It is found in guest memory by its header, the table's
+ * entries taken as offsets from the section or as addresses, whichever they are once loaded. */
+
+#define MTN_SIZE 0x143DA0u
+static uint32_t s_mtn;                    /* guest address of the loaded ryu.mtn, 0 none */
+
+static int mtn_at(uint32_t va)
+{
+    return MEM32(va) == 0x5F726863u /* "chr_" */ && MEM32(va + 4) == 0x00746164u /* "dat\0" */
+        && MEM32(va + 0x0C) == MTN_SIZE && MEM32(va + 0x10) == 3;
+}
+
+static uint32_t mtn_find(void)
+{
+    static const uint32_t ranges[][2] = { { 0x00010000u, 0x04000000u }, { 0x80000000u, 0x88000000u } };
+    for (int r = 0; r < 2; r++)
+        for (uint32_t va = ranges[r][0]; va < ranges[r][1] - 0x20; va += 0x10)
+            if (mtn_at(va))
+                return va;
+    return 0;
+}
+
+static void mtn_apply(uint32_t base)
+{
+    uint32_t first = MEM32(base + 0x18);
+    uint32_t s1 = MEM32(base + first + 4), s2 = MEM32(base + first + 8);
+    /* loaded files may hold their offsets turned into addresses */
+    uint32_t sec1 = s1 < MTN_SIZE ? base + s1 : s1;
+    uint32_t end = s2 < MTN_SIZE ? base + s2 : s2;
+    int changed = 0;
+    for (uint32_t i = 0; i < 2296 && sec1 + 4 * i < end; i++) {
+        uint32_t e = MEM32(sec1 + 4 * i);
+        uint32_t entry = e < MTN_SIZE ? sec1 + e : e;
+        if (entry < base || entry >= base + MTN_SIZE || MEM16(entry) != 3)
+            continue;
+        uint16_t anim = MEM16(entry + 2);
+        for (int k = 0; k < s_nswap; k++)
+            if (anim == s_swap_from[k]) {
+                MEM16(entry + 2) = s_swap_to[k];
+                changed++;
+                break;
+            }
+    }
+    fprintf(stderr, "[MOD] ryu.mtn at %08X: %d moves' animations swapped\n", base, changed);
+}
+
+/* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
+void mymod_frame(void)
+{
+    load_options();
+    if (!s_nswap)
+        return;
+    static unsigned tick;
+    if (s_mtn && mtn_at(s_mtn))
+        return;                           /* still there and already changed */
+    s_mtn = 0;
+    if (++tick % 120)                     /* look for it every two seconds or so */
+        return;
+    uint32_t va = mtn_find();
+    if (va) {
+        mtn_apply(va);
+        s_mtn = va;
+    }
 }
