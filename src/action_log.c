@@ -250,6 +250,7 @@ static uint32_t s_mw_ring[MW_RING], s_mw_pos, s_mw_last = ~0u;
 static struct { uint32_t from, to, va[MW_RING]; } s_mw_log[MW_LOG];
 static volatile uint32_t s_mw_n, s_mw_done;
 
+extern volatile uint32_t ngb_last_hit_type;
 static void mw_hook(uint32_t va)
 {
     uint32_t mv = MEM16(MOVE_FIELD);
@@ -352,6 +353,13 @@ void ngb_action_watch_frame(void)
     if (!ngb_show_action())
         return;
     mw_frame();
+    {
+        static uint32_t s_title_hit = ~0u;
+        if (ngb_last_hit_type != s_title_hit) {
+            s_title_hit = ngb_last_hit_type;
+            s_shown_serial++;
+        }
+    }
     ol_frame();
     uint32_t now = MEM8(ACTION_BYTE);
     mf_frame(now, now != s_shown[0]);
@@ -372,6 +380,7 @@ void ngb_action_watch_frame(void)
 }
 
 /* The title text, and a number that changes with it (the window code updates on a change). */
+extern volatile uint32_t ngb_last_hit_type;   /* src/cheats.c */
 uint32_t ngb_action_title(char *out, size_t n)
 {
     uint32_t mv = s_title_move, an = s_title_anim;
@@ -383,6 +392,8 @@ uint32_t ngb_action_title(char *out, size_t n)
     else
         len = snprintf(out, n, "move %03X anim %s%u | action 0x%02X %s", mv, an < 10000 ? "ryu:" : "weapon:",
                        an < 10000 ? an : an - 10000, s_shown[0] & 0xFF, guess_name(s_shown[0]));
+    if (ngb_last_hit_type != ~0u && len > 0 && (size_t)len < n)
+        len += snprintf(out + len, n - len, " | hit type %04X", ngb_last_hit_type);
     for (int i = 1; i < SHOWN_N && len > 0 && (size_t)len < n; i++)
         if (s_shown[i] != 0x100)
             len += snprintf(out + len, n - len, " < %02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
