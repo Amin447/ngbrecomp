@@ -297,6 +297,33 @@ uint16_t mymod_enemy_pick(uint16_t type)
     return type;
 }
 
+/* The other places that write an object's type (+0x2774): 1 sub_00168EC0 (object reset),
+ * 2 sub_002F2780 (type passed through sub_002FE290), 3 sub_002F7020 (copied from another
+ * object). Logged with their number in spawns.txt ("write N"); swapped like the spawn reads. */
+uint16_t mymod_type_write(uint16_t type, int site)
+{
+    load_options();
+    static int log = -1;
+    if (log < 0)
+        log = getenv("NGB_SPAWN_LOG") != NULL;
+    int ingame = !(MEMF(0x4B5710) == 0.0f && MEMF(0x4B5714) == 0.0f && MEMF(0x4B5718) == 0.0f);
+    uint16_t out = type;
+    if (ingame)
+        for (int k = 0; k < s_neswap; k++)
+            if (type == s_eswap_from[k]) {
+                out = s_eswap_to[k];
+                break;
+            }
+    if (log && type) {
+        FILE *f = fopen("recordings/spawns.txt", "a");
+        if (f) {
+            fprintf(f, "frame %6u write %d type %04X -> %04X\n", mymod_frames, site, type, out);
+            fclose(f);
+        }
+    }
+    return out;
+}
+
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
 void mymod_frame(void)
 {

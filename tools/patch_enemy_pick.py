@@ -50,3 +50,6 @@ uint16_t mymod_enemy_pick(uint16_t type)
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */''', 1)
     m.write_text(t)
 print("ok")
+
+# Also the other type writers (mymod_type_write): see the scratch history; sites 1-3.
+exec(open(__file__.replace('patch_enemy_pick.py', 'patch_type_write.py')).read())
