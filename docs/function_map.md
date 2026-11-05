@@ -66,6 +66,33 @@ evidence), *guess*.
 | sub_0001B3C0 | move-script input test for the roll | guess | round 4 | Only while rolling; called by the move script sub_00016300; calls the button helper sub_0001B5D0 |
 | sub_00032D30 | guard press handling | guess | round 4 | Right after a guard press (phi 0.32); reads 0xDB9F84; called by sub_00032A50 |
 | sub_0001B5D0 | button test helper | guess | rounds 3-4 | Called by move-script tests sub_0001B3C0 and others |
+| sub_0003C3D0 | set an object's action (command) | likely | action log 2 | Every change of Ryu's action byte 0x4968B4 happened inside it (250 of 250 bar 4). Callers pass a small command code 0x00-0x10 (59 call sites), not the action number: the action comes from data |
+
+
+## Ryu's actions (0x4968B4)
+
+From one free-play action log (act_20261105_183150.tsv): each number, how it was reached and the
+buttons held. Names are guesses from a single session; confirm before relying on them.
+
+| Action | Seen | Usually after | Buttons | Guess |
+|---|---|---|---|---|
+| 0x00 | 39 | FF, 2A, 0B | none | neutral / back to idle |
+| 0x06 | 27 | 00, 2A | none | standing idle |
+| 0x26 | 40 | 06, 2A | none | start running |
+| 0x28 | 25 | 26 | none | running |
+| 0x2A | 26 | 28, 26 | none | stopping from a run |
+| 0x0B | 11 | 00, 28, 26 | X | light attack |
+| 0x4E | 5 | FF | X | attack follow-up (combo) |
+| 0x5B | 4 | 0B, 5F | Y | heavy attack |
+| 0x46 | 11 | 47, 00 | LT | guard |
+| 0x47 | 6 | 46, 24 | LT | guard (held / moving) |
+| 0x22 | 4 | 46, 06 | LT | roll from guard |
+| 0x56, 0x57 | 2, 2 | 00, 2A, 28, 26 | A | jump (standing / running) |
+| 0x5F | 1 | 61 | A | second jump or air move |
+| 0x61 | 3 | 56, 57 | none | in the air / falling |
+| 0xFF | 15 | 00, 2A, 4E | none or X | no action (between moves) |
+| 0x02, 0x08-0x0A, 0x0E, 0x16, 0x24, 0x2D, 0x30, 0x32, 0x4F, 0x67, 0x86, 0x8A | 1-5 | | | unknown (hit reactions, landings, wall moves?) |
+| 0xB9 | | | X held | Ultimate Technique charge (src/ut_charge.c) |
 
 ## Memory
 

@@ -70,8 +70,9 @@ def main():
     names = ra.load_names(ROOT)
     owner = owner_table()
     counts = collections.Counter(r["function"] for r in rows)
-    print(f"{len(rows)} calls logged:", ", ".join(f"{label(int(f[4:], 16), names)} x{n}"
-                                                    for f, n in counts.most_common()))
+    print(f"{len(rows)} lines logged:", ", ".join(
+        (f"{label(int(f[4:], 16), names)} x{n}" if f.startswith("sub_") else f"{f} changes x{n}")
+        for f, n in counts.most_common()))
     print()
 
     if args.changes:
