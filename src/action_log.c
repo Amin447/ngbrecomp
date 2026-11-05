@@ -215,7 +215,7 @@ void ngb_action_frame(int toggle, int marker)
  * code (src/ingame_menu.c) shows it. ---- */
 
 static const struct { uint8_t action; const char *name; } k_guess[] = {
-    { 0x00, "neutral" }, { 0x06, "idle" }, { 0x26, "run start" }, { 0x28, "running" },
+    { 0x00, "neutral" }, { 0x06, "idle" }, { 0x08, "walk start" }, { 0x09, "walking" }, { 0x26, "run start" }, { 0x28, "running" },
     { 0x2A, "run stop" }, { 0x0B, "light attack" }, { 0x4E, "combo" }, { 0x5B, "heavy attack" },
     { 0x46, "guard" }, { 0x47, "guard held" }, { 0x22, "roll" }, { 0x56, "running jump" },
     { 0x57, "running jump" }, { 0x58, "running jump" },
