@@ -137,6 +137,8 @@ what Ryu plays.
 
 **Enemy swap (confirmed in game):** objects spawn from spawn records (+0x40 position, +0x50 u16 type); the spawn functions (sub_00153100, sub_002CD040, sub_002F2CC0) read the type through mymod_enemy_pick, and the other type writers (sub_00168EC0, sub_002F2780, sub_002F7020) through mymod_type_write (generated code edited by tools/patch_enemy_pick.py and tools/patch_type_write.py). enemy_swap=0xE:0x44 turned chapter 1's Genin into white-clad ninjas, from a save where both are loaded; enemy_swap=0xE:0x1C (Genin to bats) worked too. Swaps wait until Ryu stands in a level. The game sometimes shows its 'disc dirty or damaged' screen at startup with the same settings that work on the next try (ShowAction.bat saves stderr to recordings/stderr.txt to find out why).
 
+**Naming types automatically:** an object's +0x26D8 points at its loaded data file, a .chr ("chr_dat2") for characters, a .itm/.sob ("itm_dat2") for items and props. ShowAction dumps each type's first bytes to recordings/typedata.txt; tools/name_types.py matches them to the files in the .afs archives. Chapter 4: type 0x005C = swat (chr_swat.afs swat.chr); 0x0135-0x013B are SWAT weapons (knife, shield, grenade, gun, stick); 0x0003 = hand.itm; 0x005B, 0x00D6 town props. Types above 0xFF exist (items).
+
 ## Memory
 
 | Address | What | Source |
