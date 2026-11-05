@@ -139,6 +139,8 @@ what Ryu plays.
 
 **Naming types automatically:** an object's +0x26D8 points at its loaded data file, a .chr ("chr_dat2") for characters, a .itm/.sob ("itm_dat2") for items and props. ShowAction dumps each type's first bytes to recordings/typedata.txt; tools/name_types.py matches them to the files in the .afs archives. Chapter 4: type 0x005C = swat (chr_swat.afs swat.chr); 0x0135-0x013B are SWAT weapons (knife, shield, grenade, gun, stick); 0x0003 = hand.itm; 0x005B, 0x00D6 town props. Types above 0xFF exist (items).
 
+**Enemy variants:** the type alone does not tell kinds apart. SWAT soldiers (type 0x005C, chapters 4-5) come in three kinds by object + 0x277A = 0, 1 (shield), 2, with + 0x2791 = 0x81 + that number; both are copied from the spawn record (+0x52, +0x5B) and stay the same. + 0x277C changes while the enemy acts (it is the command the move picker reads), so it is not a variant. Chapter 5's ninjas are type 0x006B, which uses genin.chr like the chapter 1 Genin (0x000E): two types can share one model.
+
 ## Memory
 
 | Address | What | Source |
