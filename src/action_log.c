@@ -236,6 +236,8 @@ static const char *guess_name(uint32_t a)
     return "?";
 }
 
+static void mf_frame(uint32_t action, int changed);
+
 int ngb_show_action(void)
 {
     static int on = -1;
@@ -250,6 +252,7 @@ void ngb_action_watch_frame(void)
     if (!ngb_show_action())
         return;
     uint32_t now = MEM8(ACTION_BYTE);
+    mf_frame(now, now != s_shown[0]);
     if (now != s_shown[0]) {
         for (int i = SHOWN_N - 1; i > 0; i--)
             s_shown[i] = s_shown[i - 1];
@@ -266,4 +269,107 @@ uint32_t ngb_action_title(char *out, size_t n)
         if (s_shown[i] != 0x100)
             len += snprintf(out + len, n - len, " < %02X %s", s_shown[i] & 0xFF, guess_name(s_shown[i]));
     return s_shown_serial;
+}
+
+/* ---- Finding the current move (NGB_SHOW_ACTION): see docs/function_map.md. Jumps are the anchor:
+ * their moves are known (standing 0x55: moves 0x22, 0x23; running 0x56-0x58: moves 0x26-0x2C). For
+ * the jump's first 6 frames, every u16 in Ryu's object and player block equal to one of them, and
+ * every u32 pointing at one of their entries in the loaded ryu.mtn, scores once for that jump. ---- */
+
+#define MF_OBJ 0x4B4E50u
+#define MF_OBJ_N 0x2800u
+#define MF_PB 0x4968B0u
+#define MF_PB_N 0xDD0u
+#define MF_MTN_SIZE 0x143DA0u
+static uint16_t s_mf_hits[2][2][MF_OBJ_N];   /* [region][u16 / pointer][offset] */
+static uint8_t s_mf_seen[2][2][MF_OBJ_N];    /* matched during the current jump */
+static int s_mf_jumps, s_mf_frames;
+static uint32_t s_mf_mtn;
+
+static uint32_t mf_find_mtn(void)
+{
+    static const uint32_t ranges[][2] = { { 0x00010000u, 0x04000000u }, { 0x80000000u, 0x88000000u } };
+    for (int r = 0; r < 2; r++)
+        for (uint32_t va = ranges[r][0]; va < ranges[r][1] - 0x20; va += 0x10)
+            if (MEM32(va) == 0x5F726863u && MEM32(va + 4) == 0x00746164u && MEM32(va + 0x0C) == MF_MTN_SIZE
+                && MEM32(va + 0x10) == 3)
+                return va;
+    return 0;
+}
+
+static uint32_t mf_entry(uint32_t move)          /* the move's entry in the loaded ryu.mtn, 0 unknown */
+{
+    if (!s_mf_mtn)
+        return 0;
+    uint32_t base = s_mf_mtn, first = MEM32(base + 0x18);
+    uint32_t s1 = MEM32(base + first + 4);
+    uint32_t sec1 = s1 < MF_MTN_SIZE ? base + s1 : s1;
+    uint32_t e = MEM32(sec1 + 4 * move);
+    return e < MF_MTN_SIZE ? sec1 + e : e;
+}
+
+static void mf_scan(const uint16_t *moves, int n)
+{
+    uint32_t ent[8] = { 0 };
+    for (int i = 0; i < n; i++)
+        ent[i] = mf_entry(moves[i]);
+    for (int r = 0; r < 2; r++) {
+        uint32_t base = r ? MF_PB : MF_OBJ, len = r ? MF_PB_N : MF_OBJ_N;
+        for (uint32_t o = 0; o + 4 <= len; o += 2) {
+            uint16_t h = MEM16(base + o);
+            uint32_t w = MEM32(base + o);
+            for (int i = 0; i < n; i++) {
+                if (h == moves[i])
+                    s_mf_seen[r][0][o] = 1;
+                if (ent[i] && w == ent[i])
+                    s_mf_seen[r][1][o] = 1;
+            }
+        }
+    }
+}
+
+static void mf_report(void)
+{
+    FILE *f = fopen("recordings/move_field.txt", "w");
+    if (!f)
+        return;
+    fprintf(f, "Jumps seen: %d (ryu.mtn at %08X)\nPlaces matching the jump's move, by jumps matched:\n",
+            s_mf_jumps, s_mf_mtn);
+    for (int want = s_mf_jumps; want >= 1 && want >= s_mf_jumps - 2; want--)
+        for (int r = 0; r < 2; r++)
+            for (int k = 0; k < 2; k++)
+                for (uint32_t o = 0; o < (r ? MF_PB_N : MF_OBJ_N); o += 2)
+                    if (s_mf_hits[r][k][o] == want)
+                        fprintf(f, "  %2d/%d  %s +0x%04X (%08X)  %s, now %08X\n", want, s_mf_jumps,
+                                r ? "player block" : "Ryu object", o, (r ? MF_PB : MF_OBJ) + o,
+                                k ? "pointer to the move entry" : "u16 move number", MEM32((r ? MF_PB : MF_OBJ) + o));
+    fclose(f);
+}
+
+/* Once a frame (from ngb_action_watch_frame) with the action now and whether it just changed. */
+static void mf_frame(uint32_t action, int changed)
+{
+    static unsigned tick;
+    if (!s_mf_mtn && ++tick % 120 == 0)
+        s_mf_mtn = mf_find_mtn();
+    static const uint16_t stand[] = { 0x22, 0x23 };
+    static const uint16_t run[] = { 0x26, 0x27, 0x28, 0x29, 0x2A, 0x2B, 0x2C };
+    int is_stand = action == 0x55, is_run = action >= 0x56 && action <= 0x58;
+    if (changed && (is_stand || is_run) && !s_mf_frames) {
+        memset(s_mf_seen, 0, sizeof s_mf_seen);
+        s_mf_frames = 6;
+    }
+    if (!s_mf_frames)
+        return;
+    if (is_stand) mf_scan(stand, 2);
+    else if (is_run) mf_scan(run, 7);
+    if (--s_mf_frames == 0) {
+        s_mf_jumps++;
+        for (int r = 0; r < 2; r++)
+            for (int k = 0; k < 2; k++)
+                for (uint32_t o = 0; o < MF_OBJ_N; o++)
+                    s_mf_hits[r][k][o] += s_mf_seen[r][k][o];
+        make_dir("recordings");
+        mf_report();
+    }
 }
