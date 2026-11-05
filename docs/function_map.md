@@ -88,7 +88,7 @@ seen for the named rows, though not every move was checked one by one. Unnamed r
 | 0x46 | 11 | 47, 00 | LT | guard |
 | 0x47 | 6 | 46, 24 | LT | guard (held / moving) |
 | 0x22 | 4 | 46, 06 | LT | roll from guard |
-| 0x56, 0x57 | 2, 2 | 00, 2A, 28, 26 | A | jump (standing / running) |
+| 0x56, 0x57, 0x58 | 2, 2, - | 00, 2A, 28, 26 | A | running jump take-off (all use Ryu's animation 39; confirmed by the swap test). The standing jump is a different action, not found yet |
 | 0x5F | 1 | 61 | A | second jump or air move |
 | 0x61 | 3 | 56, 57 | none | in the air / falling |
 | 0xFF | 15 | 00, 2A, 4E | none or X | no action (between moves) |
@@ -115,6 +115,11 @@ How an action number reaches an animation, from Ryu's data files (`tools/ryu_mov
 Example: action 0x0B (light attack) has 203 records; move 0x190 plays weapon clip 160 (id 10160).
 Swapping a move's animation id, or a record's move, is the way to change which animation an action
 plays.
+
+**Confirmed in game (2026-11-05):** `anim_swap=39:80` in mods.txt (src/my_mods.c) changed Ryu's
+running jump to play animation 80, and only the running jump. So the chain above holds: action ->
+move record -> move -> animation id, and changing a move's animation id in the loaded ryu.mtn changes
+what Ryu plays.
 
 ## Memory
 
@@ -150,3 +155,4 @@ plays.
 | 2026-11-05 | rec_20261105_172113.bin | 3: still / X light / still / Y heavy | Shared attack path sub_00039870 -> sub_00033B50; heavy attacks drive much more audio library work. Controller data was missing in rounds 1-3 (wrong address); fixed for round 4 |
 | 2026-11-05 | rec_20261105_173623.bin | 4: still / guard / still / roll | First recording with controller data (guard = LT/Shift). Guard adds almost no functions: it is a state change, needs a memory diff. Roll shares the jump start sub_0002BDD0; roll-only sub_0001B3C0 |
 | 2026-11-05 | ShowAction.bat (live title) | check the action names | No mismatches reported for the named actions |
+| 2026-11-05 | swap test (anim_swap=39:80) | change one animation | Running jump played animation 80; standing jump unchanged: it uses another action/animation |
