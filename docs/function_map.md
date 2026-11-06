@@ -210,3 +210,55 @@ Types sharing a model (0x0044 and 0x006B) point at the very same loaded files, s
 | 2026-11-05 | rec_20261105_173623.bin | 4: still / guard / still / roll | First recording with controller data (guard = LT/Shift). Guard adds almost no functions: it is a state change, needs a memory diff. Roll shares the jump start sub_0002BDD0; roll-only sub_0001B3C0 |
 | 2026-11-05 | ShowAction.bat (live title) | check the action names | No mismatches reported for the named actions |
 | 2026-11-05 | swap test (anim_swap=39:80) | change one animation | Running jump played animation 80; standing jump unchanged: it uses another action/animation |
+
+
+## File loading and memory (researched 2026-11-06)
+
+**Global file numbers.** Every loadable file is a 16-bit number = an entry of load_img.bin
+(+4 count 0xD12, then 8-byte entries {size, category}). Map a chr_*.afs entry to its number by
+matching sizes (tools: scratch li2.py; see HANDOVER 5.5). Titan = 0ABC 0ABD 0001 0ABE 0B16 0AC7
+0AC8 0AC9 0B04 (confirmed from a mission). Genin main model 0x8A/0x8B, Jonin 0x156/0x325, Ryu 0x5E.
+
+**List struct** (0x61C bytes): +0 u32[255] (size rounded to 4 KB, 0 = look up later), +0x404 u16[255]
+file numbers, +0x602 count byte, +0x604/+0x608/+0x618 (busy flag)/+0x619 state.
+- 0xDB5400: the "area request" list B. Filled by `sub_00171F30(ecx=list, esi=file, [esp+4]=size)`,
+  which skips duplicates and appends. Its callers: sub_0016C730 (room files), sub_0016D290,
+  sub_00173880, sub_00173990, sub_001DBC90, sub_001DCF10, sub_002EAAE0, sub_002ED940, sub_002EDF30.
+- 0xDA5060 + k*0x61C (array, end ~0xDB19F8): load-job lists, processed by the table-called workers
+  sub_0016F640 / FA40 / FC70 / FE40 from the end (entry -> 0xFFFF, count - 1). After filling, the
+  list is sorted and already-loaded files are removed (count drops; normal).
+- 0xDA49C0: another list in the same layout (holds always-loaded files such as Ryu, Genin in ch. 1).
+- `sub_0016BF10`: resets all lists and the slot table.
+
+**Loaded-file slot table** 0xDB33E0, 0x20 bytes a slot (up to 0xDB53C0): +0 start, +4 end, +8 size,
++0x14 u16 file number, +0x16/+0x17 flags, +0x1B "still needed" (set by sub_0016CC60/CE90 for files
+in list B). An object's data pointer (+0x26D8) is read from here (sub_0016D400).
+
+**Room files.** `sub_0016C730(ecx=room 0xDB9AC2 (<0xF5), pool start, pool end)` adds a room's own
+files from a table (8 bytes = 4 file numbers per room) in the stage data at [0xDB98C4]
+(set by sub_00167A50, loaded through sub_0016D2D0). Each room window is 0x9D800 bytes.
+`sub_002ED940` looks up (key, file) pairs (section at [[0xDB98C4]+4]+0xC, 0xFFFF-terminated) and
+frees the slots inside the target pool before loading (pool records 0xDB9A04 + 16*k).
+
+**Memory pools** (`sub_00167650`, once at start; base = [0xD21754]; record i at 0xDB98A4 + 16*i
+holds its start, the next record its end):
+| start record | size | note |
+|---|---|---|
+| 0xDB98A4 | 0x7D000 | |
+| 0xDB9914 | 0x151800 | |
+| 0xDB9944 | 0x19C800 | |
+| 0xDB9974 | 0xAF000 | |
+| 0xDB9994 | 0x9D800 | room window A |
+| 0xDB99A4 | 0x9D800 | room window B |
+| 0xDB99D4 | 0x8A000 | |
+| 0xDB99E4 | 0x2F8000 | |
+| 0xDB9A04 | 0x226000 | character pool 0 (sub_002ED940 k=0) |
+| 0xDB9A14 | 0xAF000 | pool 1 |
+| 0xDB9A24 | 0x145000 | pool 2 |
+| 0xDB9A34 | 0x19000 | pool 3 |
+| 0xDB9A44 | 0x19000 | |
+| 0xDB9A54 | 0x173E000 | large general pool (sub_0016C700 frees slots inside it) |
+
+Cross-chapter enemies (titan in chapter 1) load but then the area hangs or loses parts: they do
+not fit the fixed pools. Idea: grow a character pool by taking bytes from the 0x173E000 pool
+(patch the adds in sub_00167650).
