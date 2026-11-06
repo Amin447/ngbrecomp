@@ -521,6 +521,13 @@ static void load_files_in(uint32_t L)
             if (MEM16(L + 0x404 + i * 2) == (uint16_t)s_load_when) break;
         if (i == n) return;
     }
+    else if (s_ndrop) {   /* no load_files_when: only lists holding one of drop_files */
+        int hit = 0;
+        for (i = 0; i < n && !hit; i++)
+            for (int k = 0; k < s_ndrop; k++)
+                if (MEM16(L + 0x404 + i * 2) == s_drop[k]) { hit = 1; break; }
+        if (!hit) return;
+    }
     int d = 0;   /* next drop_files entry whose place a loaded file takes (no shifting) */
     for (int k = 0; k < s_nload; k++) {
         n = MEM8(L + 0x602);
@@ -571,11 +578,15 @@ void mymod_list_tick(uint32_t L)
     }
     /* Add once per filling of a list: the workers cross off loaded files from the end (0xFFFF,
      * then count - 1), so re-checking would add them again forever (the game hung loading). */
-    static uint32_t done[16];
-    unsigned slot = (L >> 4) % 16;
-    if (MEM8(L + 0x602) == 0) { if (done[slot] == L) done[slot] = 0; return; }
-    if (done[slot] == L || L < 0x1000 || L >= 0x4000000) return;
-    unsigned before = MEM8(L + 0x602);
+    static uint32_t done[64];   /* lists already given load_files (exact addresses) */
+    unsigned k, n = MEM8(L + 0x602);
+    for (k = 0; k < 64 && done[k] != L; k++) ;
+    if (n == 0) { if (k < 64) done[k] = 0; return; }
+    if (k < 64 || L < 0x1000 || L >= 0x4000000) return;
+    unsigned before = n;
     load_files_in(L);
-    if (MEM8(L + 0x602) != before) done[slot] = L;
+    if (MEM8(L + 0x602) != before || MEM16(L + 0x404) != 0xFFFF) {
+        for (k = 0; k < 64 && done[k]; k++) ;
+        if (k < 64) done[k] = L;
+    }
 }
