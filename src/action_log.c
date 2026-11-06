@@ -382,7 +382,6 @@ static void tn_read_hook(const char *path, uint64_t off, size_t len)
     if (strncmp(b, "chr_", 4) != 0)
         return;
     {   /* recordings/chr_loads.txt: the read and the code addresses on the game's stack (call chain) */
-        extern uint32_t g_esp;
         static FILE *lf;
         if (!lf) {
             make_dir("recordings");
@@ -391,7 +390,7 @@ static void tn_read_hook(const char *path, uint64_t off, size_t len)
         if (lf) {
             fprintf(lf, "%s off %llX len %zX buf %08X stack", b, (unsigned long long)off, len,
                     (uint32_t)((intptr_t)xbox_FileReadBuffer - g_xbox_mem_offset));
-            uint32_t sp = g_esp;
+            uint32_t sp = esp;
             for (uint32_t q = 0; q < 0x400; q += 4) {
                 uint32_t v = MEM32(sp + q);
                 if (v >= 0x11000 && v < 0x3C0000)
