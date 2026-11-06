@@ -393,7 +393,7 @@ static void tn_frame(void)
     for (int i = 0; i < 48; i++) {
         uint32_t o = 0x4B4E50u + 0x2800u * i, cd = MEM32(o + 0x26D8);
         uint32_t t = MEM16(o + 0x2774);
-        if (!cd || t >= 0x400 || s_tn_type[t][0])
+        if (!cd || t >= 0x400)
             continue;
         if (!s_td_done[t]) {               /* its data's first bytes, matched to the archives offline */
             s_td_done[t] = 1;
@@ -432,6 +432,8 @@ static void tn_frame(void)
                 fclose(h);
             }
         }
+        if (s_tn_type[t][0])
+            continue;
         uint32_t n = s_tn_n, lo = n > TN_READS ? n - TN_READS : 0;
         for (uint32_t k = n; k-- > lo;) {
             uint32_t j = k % TN_READS;
