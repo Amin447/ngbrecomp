@@ -143,7 +143,33 @@ what Ryu plays.
 
 **What does not change a SWAT soldier (tested in game):** setting its kind (+0x277A, with +0x2791) or swapping its weapon objects' types (0x135 knife, 0x137 gun, 0x139 grenade, 0x13B shield; they are objects of their own) changes only those numbers. The look and fighting come from data set when the soldier and its weapons are made.
 
-**Enemy types found so far** (type: model file; tools/name_types.py): 0x0000 ryu; 0x000E Genin and 0x0044 white-clad ninja, 0x006B chapter 5 ninja (all genin.chr); 0x0017 yonin.chr (seen in a mission); 0x001C bat; 0x005C swat.chr; 0x0021 and 0x004E dinosaurs (garra.chr, two kinds); 0x0019 insect (hamu.chr).
+**Enemy types found so far** (tools/name_types.py for the model, recordings/types_info.txt for the rest;
+health is the most seen, behavior group = 0x423600[type], valid only for types below about 0x5C):
+
+| Type | Model (.chr) | Seen as | Health | Group |
+|---|---|---|---|---|
+| 0x0000 | ryu | Ryu | | 4235DC |
+| 0x000E | genin | Genin, chapter 1 | | 4235DC |
+| 0x0015 | murai | Murai (boss) | 5000 | 4235DC |
+| 0x0017 | yonin | ninja (mission) | 900 | 4235DC |
+| 0x0019 | hamu | insect | 440 | 4235D8 |
+| 0x001C | bat | bat | | 4235D8 |
+| 0x0021 | garra | dinosaur | 3630 | 4235D8 |
+| 0x004E | garra | dinosaur, second kind | 3300 | 4235D8 |
+| 0x0026 | horse | horse | 1600 (2 segments) | 4235D8 |
+| 0x0060 | horse | horse, second kind | 6500 (2 segments) | |
+| 0x0028 | rider | rider | 580 | 4235D8 |
+| 0x004B | rider | rider | 1500 | 4235D8 |
+| 0x006C | rider | rider | 1200 | |
+| 0x0044 | genin | white-clad ninja, chapter 1 | 749 | 4235D8 |
+| 0x006B | genin | ninja, chapter 5 | 770 | |
+| 0x005C | swat | SWAT soldier (kinds 0-2 by +0x277A) | | |
+| 0x005D | hanin | hanin ninja | 700 | |
+
+An object points at two loaded files only: +0x26D0 its motions (.mtn, "chr_dat"), +0x26D8 its .chr.
+Types sharing a model (0x0044 and 0x006B) point at the very same loaded files, so their look
+(textures, e.g. a Jonin's from chr_jonin.afs, which has no .chr) is set up elsewhere.
+
 
 ## Memory
 
