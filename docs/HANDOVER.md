@@ -269,3 +269,6 @@ Photos: G:/NinjaGaidenSigma/make_enemy_photos.py adds a Photo column (Blender re
 
 ### Sigma data (2026-11-06)
 Type numbers = Sigma CHAR_* ids (docs/char_ids.csv). Ishtaros 0x54, Nicchae 0x59, red ninja 0x6B, Ayane 0x3D. See docs/sigma_knowledge.md.
+
+### Stage script swap (2026-11-07)
+yasik_cmn.afs (userdata/Cache, Normal block at 0x800) stry_dat = Sigma btl/sty VM (0x82000000|op). Spawn = op 0x69(1, TYPE, 0, x, y, z...); 20 Genin spawns in chapter 1. tools/ngb_sty_swap.py swaps a type in all type-taking ops (backup .bak). Test Genin->titan: Genin gone from gameplay (still in cutscenes), titan not spawned: the script does not load files (0xd6 = flags), the area data does. So the script controls spawns, but titan still needs its files loaded (memory problem, see above).
