@@ -409,6 +409,28 @@ static void tn_frame(void)
                 fputc('\n', g);
                 fclose(g);
             }
+            /* every pointer in the object to data starting with a 4-letter magic: its loaded files
+             * (model, textures, ...), matched to the archives by tools/name_types.py */
+            FILE *h = fopen("recordings/typefiles.txt", "a");
+            if (h) {
+                for (uint32_t q = 0; q < 0x2800; q += 4) {
+                    uint32_t ptr = MEM32(o + q);
+                    if (ptr < 0x10000 || (ptr >= 0x04000000 && ptr < 0x80000000u) || ptr >= 0x88000000u || (ptr & 3))
+                        continue;
+                    int letters = 1;
+                    for (int c = 0; c < 3; c++) {
+                        uint8_t ch = MEM8(ptr + c);
+                        if (!((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z')))
+                            letters = 0;
+                    }
+                    if (!letters)
+                        continue;
+                    fprintf(h, "type %04X +%04X %08X:", t, q, ptr);
+                    for (int c = 0; c < 32; c++) fprintf(h, "%02X", MEM8(ptr + c));
+                    fputc('\n', h);
+                }
+                fclose(h);
+            }
         }
         uint32_t n = s_tn_n, lo = n > TN_READS ? n - TN_READS : 0;
         for (uint32_t k = n; k-- > lo;) {
