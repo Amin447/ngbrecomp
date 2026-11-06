@@ -6,7 +6,7 @@ failed and why, and what is left. **Keep it up to date**: after each piece of wo
 "Status" and "Next steps" and the date below. Exact addresses and function details are in
 `docs/function_map.md`; the enemy table is `docs/enemy_types.csv`.
 
-Last updated: 2026-11-06.
+Last updated: 2026-11-06 (enemy table 31 rows).
 
 ---------------------------------------------------------------------------------------------------
 
@@ -169,13 +169,17 @@ types during boot.
 - Weapons and props are objects too, with types of their own (SWAT: 0x135 knife, 0x137 gun,
   0x139 grenade, 0x13B shield; 0x0003 Ryu's hand; types above 0xFF exist).
 
-### 5.3 Enemy types found (full table: `docs/enemy_types.csv`)
-0x000E Genin, 0x0044 white-clad ninja, 0x006B chapter 5 ninja (all genin.chr); 0x0017 yonin;
-0x005D hanin; 0x0015 Murai (boss, 5000 hp); 0x0019 insect (hamu); 0x001C bat; 0x0021 and 0x004E
-dinosaurs (garra); 0x0026 and 0x0060 horses; 0x0028, 0x004B, 0x006C riders; 0x005C SWAT soldier
-(kinds 0-2 by + 0x277A, 1 = shield). Types sharing a .chr point at the very same loaded files, so
-the clan / look (e.g. Jonin textures) is set elsewhere: not yet found. Red ninjas seen in a
-mission did not appear as a new type.
+### 5.3 Enemy types found (full table with health: `docs/enemy_types.csv`, 31 rows)
+Ninjas: 0x000E Genin, 0x0044 white-clad, 0x006B chapter 5 (all genin.chr); 0x0017 yonin; 0x005D hanin;
+0x0011 and 0x0016 kage. Bosses (by health): 0x0015 Murai 5000, 0x0020 kasek 13000 (4 bars, part 0x0039),
+0x0022 furau 10000, 0x0029 hyudo 9800 (parts 0x002A, 0x002B), 0x002C Doku 7500. Others: 0x0019 insect
+(hamu), 0x001C bat, 0x001E guuru, 0x0021/0x004E dinosaurs (garra), 0x0026/0x0060 horses, 0x0028/0x004B/
+0x006C riders, 0x0055/0x006D cat, 0x005C SWAT (kinds by +0x277A), 0x0031 sumau part, 0x0047 b_grd.
+Names come from the game's file names; the user's descriptions turn them into in-game names.
+Types sharing a .chr point at the very same loaded files, so the clan / look (e.g. Jonin
+textures) is set elsewhere: not yet found. Red ninjas seen in a mission: type still unknown.
+Fixed 2026-11-06: typedata.txt skipped types the old address namer had named; every new type is
+dumped now. Types missing from it can be named by size (header + 0x0C) against the archives.
 
 ### 5.4 Tested and did not work (don't repeat)
 - Editing the loaded ryu.chr in memory: disc error screen. Hook the code instead.
@@ -191,7 +195,7 @@ mission did not appear as a new type.
 ## 6. Status and next steps
 
 **Done:** builds (Linux and Windows), damage, animation, combo and enemy swaps, ShowAction research
-mode with automatic logs, enemy naming tools, 17-type enemy table, docs. All pushed to `my-mods`.
+mode with automatic logs, enemy naming tools, 31-row enemy table, docs. All pushed to `my-mods`.
 
 **Next steps (pick with the user):**
 1. Grow the enemy table: the user plays missions with ShowAction.bat; run `tools/name_types.py`
