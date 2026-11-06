@@ -379,6 +379,11 @@ static void tn_read_hook(const char *path, uint64_t off, size_t len)
     const char *b = path + strlen(path);
     while (b > path && b[-1] != '\\' && b[-1] != '/')
         b--;
+    {   /* recordings/all_loads.txt: every file read in order (find which level file lists enemies) */
+        static FILE *af;
+        if (!af) { make_dir("recordings"); af = fopen("recordings/all_loads.txt", "w"); }
+        if (af) { fprintf(af, "%s off %llX len %zX\n", b, (unsigned long long)off, len); fflush(af); }
+    }
     if (strncmp(b, "chr_", 4) != 0)
         return;
     {   /* recordings/chr_loads.txt: the read and the code addresses on the game's stack (call chain) */
@@ -391,10 +396,10 @@ static void tn_read_hook(const char *path, uint64_t off, size_t len)
             fprintf(lf, "%s off %llX len %zX buf %08X stack", b, (unsigned long long)off, len,
                     (uint32_t)((intptr_t)xbox_FileReadBuffer - g_xbox_mem_offset));
             uint32_t sp = esp;
-            for (uint32_t q = 0; q < 0x400; q += 4) {
+            for (uint32_t q = 0; q < 0x10000; q += 4) {
                 uint32_t v = MEM32(sp + q);
-                if (v >= 0x11000 && v < 0x3C0000)
-                    fprintf(lf, " %X", v);
+                if (v >= 0x11000 && v < 0x329000)
+                    fprintf(lf, " %X@%X", v, q);
             }
             fputc(10, lf);
             fflush(lf);
