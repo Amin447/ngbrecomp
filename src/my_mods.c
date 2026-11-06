@@ -425,7 +425,6 @@ void mymod_frame(void)
 {
     mymod_frames++;
     needed_dump("frame");
-    mymod_load_enemies();
     load_options();
     variant_frame();
     if (!s_nswap)
@@ -440,18 +439,6 @@ void mymod_frame(void)
     if (va) {
         mtn_apply(va);
         s_mtn = va;
-    }
-    for (int k = 0; k < s_ndrop; k++) {   /* remove dropped files (shift the list down) */
-        unsigned n = MEM8(0xDB5A02);
-        for (unsigned i = 0; i < n; i++)
-            if (MEM16(0xDB5804 + i * 2) == s_drop[k]) {
-                for (unsigned q = i; q + 1 < n; q++) {
-                    MEM16(0xDB5804 + q * 2) = MEM16(0xDB5804 + (q + 1) * 2);
-                    MEM32(0xDB5400 + q * 4) = MEM32(0xDB5400 + (q + 1) * 4);
-                }
-                MEM8(0xDB5A02) = (uint8_t)(n - 1);
-                break;
-            }
     }
 }
 
@@ -511,36 +498,84 @@ static void needed_dump(const char *why)
         }
     }
     unsigned n = MEM8(0xDB5A02);
-    uint32_t h = n;
+    uint32_t h = n * 7 + MEM8(0xDA4FC2);
+    for (unsigned i = 0; i < MEM8(0xDA4FC2); i++) h = h * 31 + MEM16(0xDA4DC4 + i * 2);
     for (unsigned i = 0; i < n; i++) h = h * 31 + MEM16(0xDB5804 + i * 2);
     if (h == last && why[0] == 'f') return;
     last = h;
     if (!f) f = fopen("recordings/needed.txt", "w");
     if (!f) return;
-    fprintf(f, "frame %u %s n %u:", mymod_frames, why, n);
+    fprintf(f, "frame %u %s A(DA4DC4) n %u:", mymod_frames, why, MEM8(0xDA4FC2));
+    for (unsigned i = 0; i < MEM8(0xDA4FC2); i++) fprintf(f, " %04X", MEM16(0xDA4DC4 + i * 2));
+    fprintf(f, "\n   B n %u:", n);
     for (unsigned i = 0; i < n; i++) fprintf(f, " %04X", MEM16(0xDB5804 + i * 2));
     fputc(10, f); fflush(f);
 }
 
+static void load_files_in(uint32_t L)
+{
+    unsigned n = MEM8(L + 0x602), i;
+    if (!s_nload || n == 0) return;
+    if (s_load_when >= 0) {   /* only a list that already loads this file (e.g. 0x156 Jonin) */
+        for (i = 0; i < n; i++)
+            if (MEM16(L + 0x404 + i * 2) == (uint16_t)s_load_when) break;
+        if (i == n) return;
+    }
+    int d = 0;   /* next drop_files entry whose place a loaded file takes (no shifting) */
+    for (int k = 0; k < s_nload; k++) {
+        n = MEM8(L + 0x602);
+        for (i = 0; i < n; i++)
+            if (MEM16(L + 0x404 + i * 2) == s_load_enemy[k]) break;
+        if (i < n) continue;               /* already listed */
+        unsigned at = n;
+        for (; d < s_ndrop && at == n; d++)
+            for (i = 0; i < n; i++)
+                if (MEM16(L + 0x404 + i * 2) == s_drop[d]) { at = i; break; }
+        if (at == n) {
+            if (n >= 0xFF) return;
+            MEM8(L + 0x602) = (uint8_t)(n + 1);
+        }
+        MEM16(L + 0x404 + at * 2) = s_load_enemy[k];
+        MEM32(L + at * 4) = 0;
+    }
+}
+
+/* Two file lists share one layout (u32[255] at +0, u16 file numbers at +0x404, count byte at
+ * +0x602): 0xDB5400 (marks loaded slots, sub_0016CC60...) and 0xDA49C0. */
 void mymod_load_enemies(void)
 {
     load_options();
-    if (!s_nload || MEM8(0xDB5A02) == 0) return;
-    if (s_load_when >= 0) {   /* only an area list that already loads this file (e.g. 0x8A Genin) */
-        unsigned n = MEM8(0xDB5A02), i;
-        for (i = 0; i < n; i++)
-            if (MEM16(0xDB5804 + i * 2) == (uint16_t)s_load_when) break;
-        if (i == n) return;
+    /* list B (0xDB5400) is per area: adding there did not load the files and broke areas */
+    load_files_in(0xDA49C0);
+}
+
+/* Called by the file-list workers (tools/patch_load_list.py) with the list they process. Logs each
+ * new list (recordings/lists.txt, NGB_SPAWN_LOG) and adds load_files when load_files_when is in it. */
+void mymod_list_tick(uint32_t L)
+{
+    load_options();
+    if (getenv("NGB_SPAWN_LOG")) {
+        static FILE *f; static uint32_t last;
+        unsigned n = MEM8(L + 0x602);
+        uint32_t h = L * 7 + n;
+        for (unsigned i = 0; i < n; i++) h = h * 31 + MEM16(L + 0x404 + i * 2);
+        if (h != last) {
+            last = h;
+            if (!f) f = fopen("recordings/lists.txt", "w");
+            if (f) {
+                fprintf(f, "frame %u list %08X n %u:", mymod_frames, L, n);
+                for (unsigned i = 0; i < n; i++) fprintf(f, " %04X", MEM16(L + 0x404 + i * 2));
+                fputc(10, f); fflush(f);
+            }
+        }
     }
-    for (int k = 0; k < s_nload; k++) {
-        unsigned n = MEM8(0xDB5A02), i;
-        for (i = 0; i < n; i++)
-            if (MEM16(0xDB5804 + i * 2) == s_load_enemy[k])
-                break;
-        if (i < n || n >= 0xFF)
-            continue;
-        MEM16(0xDB5804 + n * 2) = s_load_enemy[k];
-        MEM32(0xDB5400 + n * 4) = 0;
-        MEM8(0xDB5A02) = (uint8_t)(n + 1);
-    }
+    /* Add once per filling of a list: the workers cross off loaded files from the end (0xFFFF,
+     * then count - 1), so re-checking would add them again forever (the game hung loading). */
+    static uint32_t done[16];
+    unsigned slot = (L >> 4) % 16;
+    if (MEM8(L + 0x602) == 0) { if (done[slot] == L) done[slot] = 0; return; }
+    if (done[slot] == L || L < 0x1000 || L >= 0x4000000) return;
+    unsigned before = MEM8(L + 0x602);
+    load_files_in(L);
+    if (MEM8(L + 0x602) != before) done[slot] = L;
 }
