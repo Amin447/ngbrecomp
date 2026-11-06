@@ -266,3 +266,6 @@ Grows character pool 0 by N bytes taken from the general pool so titan fits in c
 Result 2026-11-06: hang on area load. Cross-chapter titan shelved.
 
 Photos: G:/NinjaGaidenSigma/make_enemy_photos.py adds a Photo column (Blender renders from UE_Export) and builds enemy_types.xlsx with pictures. No model yet: 003B, 0054 Ishtaros, 0059 Nicchae, 0067 Evil Ryu.
+
+### Sigma data (2026-11-06)
+Type numbers = Sigma CHAR_* ids (docs/char_ids.csv). Ishtaros 0x54, Nicchae 0x59, red ninja 0x6B, Ayane 0x3D. See docs/sigma_knowledge.md.
