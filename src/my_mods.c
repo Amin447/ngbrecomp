@@ -22,6 +22,8 @@
  *                      ninja) instead (up to 8 lines; types as the ShowAction title's "hit type")
  *   variant_swap=0x5C:0:1  objects of type 0x5C (SWAT) spawned as kind 0 (object +0x277A) spawn
  *                      as kind 1 (the shield soldier) instead (up to 8 lines)
+ *   char_pool_extra=0x200000  move this many bytes from the big general memory pool into
+ *                      character pool 0 (0xDB9A04, normally 0x226000) at startup
  *   load_files=0xABC,... every area's file list (0xDB5804) also gets these global file numbers
  *   drop_files=0x8A,0x8B also remove these files from that list (frees memory; only when nothing
  *                      of that kind spawns any more, e.g. all Genin swapped)
@@ -57,6 +59,7 @@ static int s_neswap;
 static uint16_t s_load_enemy[32];
 static int s_nload;
 static int s_load_when = -1;
+static uint32_t s_char_pool_extra;   /* char_pool_extra */
 static uint16_t s_drop[16];
 static int s_ndrop;   /* drop_files: file numbers removed after load_files is added */   /* load_files_when: only lists holding this file number */
 static uint16_t s_vswap_type[8], s_vswap_from[8], s_vswap_to[8];
@@ -75,6 +78,7 @@ static void set_option(const char *key, const char *val)
             s_nswap++;
         }
     }
+    else if (!strcmp(key, "char_pool_extra")) s_char_pool_extra = (uint32_t)strtoul(val, NULL, 0) & ~0xFFFu;
     else if (!strcmp(key, "drop_files")) {
         const char *p = val;
         while (*p && s_ndrop < 16) {
@@ -125,6 +129,15 @@ static void set_option(const char *key, const char *val)
     else return;
     if (s_taken < 0) s_taken = 0;
     if (s_dealt < 0) s_dealt = 0;
+}
+
+static void load_options(void);
+/* sub_00167650 (memory pool setup): extra bytes for character pool 0, taken from the general pool */
+uint32_t mymod_char_pool_extra(void)
+{
+    load_options();
+    if (s_char_pool_extra > 0x1000000) s_char_pool_extra = 0x1000000;
+    return s_char_pool_extra;
 }
 
 static void load_options(void)
