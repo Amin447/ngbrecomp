@@ -231,6 +231,18 @@ dumped now. Types missing from it can be named by size (header + 0x0C) against t
   load_files_when=0x8A and drop_files=0x8A,0x8B (remove Genin's model files).
 - sub_002E1C80 (patched by tools/patch_load_enemy.py) also appends to that list but did not run in
   chapter 1; recordings/needed.txt and chr_slots.txt log the list and the table (NGB_SPAWN_LOG).
+- **File-list workers (2026-11-06):** sub_0016F640/FA40/FC70/FE40 (called from a table) each take
+  a list struct (u32[255] +0, u16 file numbers +0x404, count byte +0x602) and work through it from
+  the end (entry set to 0xFFFF, then count - 1). After filling, the game sorts the list and removes
+  files already loaded (count drops, e.g. 99 -> 74; normal). tools/patch_load_list.py hooks them with
+  mymod_list_tick(list): logs every list to recordings/lists.txt and adds load_files once per filling
+  (re-adding as entries were crossed off hung the game). In chapter 1 titan's files then loaded but
+  the area hung at 48 files: most likely out of memory.
+- A titan mission's list confirmed titan's files: 0ABC 0ABD 0001 0ABE 0B16 0AC7 0AC8 0AC9 0B04.
+  Lists are grouped per character. Jonin's group in chapter 1: 0156 051A 0325. Genin's: 0388 008A
+  0003 008B 0844 04F5 02C4 0849 04FF 0343 08C1.
+- Testing now: Genin and Jonin both swapped to titan, and titan's 8 files take the places of their
+  8 biggest own files (drop_files, replaced in place, so the list does not grow).
 - Earlier plan: decode the stry_dat script commands (find the command whose argument is type 0x0E or
   genin's archive number), then patch it when the block is read to request titan (chr_titan).
 
