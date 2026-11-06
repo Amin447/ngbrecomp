@@ -22,6 +22,11 @@
  *                      ninja) instead (up to 8 lines; types as the ShowAction title's "hit type")
  *   variant_swap=0x5C:0:1  objects of type 0x5C (SWAT) spawned as kind 0 (object +0x277A) spawn
  *                      as kind 1 (the shield soldier) instead (up to 8 lines)
+ *   load_files=0xABC,... every area's file list (0xDB5804) also gets these global file numbers
+ *   drop_files=0x8A,0x8B also remove these files from that list (frees memory; only when nothing
+ *                      of that kind spawns any more, e.g. all Genin swapped)
+ *   load_files_when=0x8A only add them to lists that already load file 0x8A (Genin's model)
+ *                      (load_img.bin ids; titan: 0xABC,0xABD,0xABE,0xAC7,0xAC8,0xAC9,0xB04,0xB16)
  *   move_swap=0x191:0x1F2  every move record of Ryu's (ryu.chr) that picks move 0x191 picks 0x1F2
  *                      instead: rewires combos (up to 8 lines; numbers as the ShowAction title
  *                      shows them, 0x prefix for hex)
@@ -29,6 +34,7 @@
 #define RECOMP_GENERATED_CODE
 #include "recomp_funcs.h"
 #include <stdio.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
 #ifdef _WIN32
@@ -48,6 +54,11 @@ static uint16_t s_mswap_from[8], s_mswap_to[8];
 static int s_nmswap;
 static uint16_t s_eswap_from[8], s_eswap_to[8];
 static int s_neswap;
+static uint16_t s_load_enemy[32];
+static int s_nload;
+static int s_load_when = -1;
+static uint16_t s_drop[16];
+static int s_ndrop;   /* drop_files: file numbers removed after load_files is added */   /* load_files_when: only lists holding this file number */
 static uint16_t s_vswap_type[8], s_vswap_from[8], s_vswap_to[8];
 static int s_nvswap;
 
@@ -62,6 +73,28 @@ static void set_option(const char *key, const char *val)
             s_swap_from[s_nswap] = (uint16_t)from;
             s_swap_to[s_nswap] = (uint16_t)to;
             s_nswap++;
+        }
+    }
+    else if (!strcmp(key, "drop_files")) {
+        const char *p = val;
+        while (*p && s_ndrop < 16) {
+            char *e; long v = strtol(p, &e, 0);
+            if (e == p) break;
+            s_drop[s_ndrop++] = (uint16_t)v;
+            p = e; while (*p == ',' || *p == ' ') p++;
+        }
+    }
+    else if (!strcmp(key, "load_files_when")) {
+        int v;
+        if (sscanf(val, "%i", &v) == 1) s_load_when = v;
+    }
+    else if (!strcmp(key, "load_files")) {   /* comma separated global file numbers */
+        const char *p = val;
+        while (*p && s_nload < 32) {
+            char *e; long v = strtol(p, &e, 0);
+            if (e == p) break;
+            s_load_enemy[s_nload++] = (uint16_t)v;
+            p = e; while (*p == ',' || *p == ' ') p++;
         }
     }
     else if (!strcmp(key, "enemy_swap") && s_neswap < 8) {
@@ -385,9 +418,14 @@ static void variant_frame(void)
 }
 
 /* Once a frame on the game's thread (src/cheats.c, ngb_frame_tick). */
+extern ptrdiff_t g_xbox_mem_offset;
+static void needed_dump(const char *why);
+void mymod_load_enemies(void);
 void mymod_frame(void)
 {
     mymod_frames++;
+    needed_dump("frame");
+    mymod_load_enemies();
     load_options();
     variant_frame();
     if (!s_nswap)
@@ -402,6 +440,18 @@ void mymod_frame(void)
     if (va) {
         mtn_apply(va);
         s_mtn = va;
+    }
+    for (int k = 0; k < s_ndrop; k++) {   /* remove dropped files (shift the list down) */
+        unsigned n = MEM8(0xDB5A02);
+        for (unsigned i = 0; i < n; i++)
+            if (MEM16(0xDB5804 + i * 2) == s_drop[k]) {
+                for (unsigned q = i; q + 1 < n; q++) {
+                    MEM16(0xDB5804 + q * 2) = MEM16(0xDB5804 + (q + 1) * 2);
+                    MEM32(0xDB5400 + q * 4) = MEM32(0xDB5400 + (q + 1) * 4);
+                }
+                MEM8(0xDB5A02) = (uint8_t)(n - 1);
+                break;
+            }
     }
 }
 
@@ -425,4 +475,72 @@ uint16_t mymod_enemy_pick_rec(uint32_t rec)
         }
     }
     return mymod_enemy_pick(MEM16(rec + 0x50));
+}
+
+/* load_enemy=TYPE: make every area also load TYPE's chr_*.afs, so enemy_swap can use enemies from
+ * other chapters. Called (tools/patch_load_enemy.py) each time the game's area setup
+ * (sub_002E1C80) adds a type to its needed-types list (u16 at 0xDB5804, count byte 0xDB5A02);
+ * the loader (sub_0016CC60 etc.) then loads a file for every listed type. */
+
+/* Debug (NGB_SPAWN_LOG): recordings/needed.txt, the game's needed-types list when it changes. */
+static void needed_dump(const char *why)
+{
+    static FILE *f; static uint32_t last;
+    if (!getenv("NGB_SPAWN_LOG")) return;
+    {   /* also recordings/chr_slots.txt: the loaded chr table at 0xDB33E0 (0x20 bytes a slot) */
+        static FILE *sf; static uint32_t sl;
+        uint32_t hh = 0;
+        for (uint32_t q = 0; q < 64 * 0x20; q += 4) hh = hh * 33 + MEM32(0xDB33E0 + q);
+        if (hh != sl) {
+            sl = hh;
+            if (!sf) sf = fopen("recordings/chr_slots.txt", "w");
+            if (sf) {
+                fprintf(sf, "== frame %u\n", mymod_frames);
+                for (uint32_t s = 0; s < 64; s++) {
+                    uint32_t a = 0xDB33E0 + s * 0x20, nz = 0;
+                    for (uint32_t q = 0; q < 0x20; q += 4) nz |= MEM32(a + q);
+                    if (!nz) continue;
+                    fprintf(sf, "%2u", s);
+                    for (uint32_t q = 0; q < 0x20; q += 4) fprintf(sf, " %08X", MEM32(a + q));
+                    uint32_t d = MEM32(a);
+                    if (d >= 0x10000 && d < 0x8000000) fprintf(sf, "  [%.8s]", (const char *)(intptr_t)(g_xbox_mem_offset + (ptrdiff_t)d));
+                    fputc(10, sf);
+                }
+                fflush(sf);
+            }
+        }
+    }
+    unsigned n = MEM8(0xDB5A02);
+    uint32_t h = n;
+    for (unsigned i = 0; i < n; i++) h = h * 31 + MEM16(0xDB5804 + i * 2);
+    if (h == last && why[0] == 'f') return;
+    last = h;
+    if (!f) f = fopen("recordings/needed.txt", "w");
+    if (!f) return;
+    fprintf(f, "frame %u %s n %u:", mymod_frames, why, n);
+    for (unsigned i = 0; i < n; i++) fprintf(f, " %04X", MEM16(0xDB5804 + i * 2));
+    fputc(10, f); fflush(f);
+}
+
+void mymod_load_enemies(void)
+{
+    load_options();
+    if (!s_nload || MEM8(0xDB5A02) == 0) return;
+    if (s_load_when >= 0) {   /* only an area list that already loads this file (e.g. 0x8A Genin) */
+        unsigned n = MEM8(0xDB5A02), i;
+        for (i = 0; i < n; i++)
+            if (MEM16(0xDB5804 + i * 2) == (uint16_t)s_load_when) break;
+        if (i == n) return;
+    }
+    for (int k = 0; k < s_nload; k++) {
+        unsigned n = MEM8(0xDB5A02), i;
+        for (i = 0; i < n; i++)
+            if (MEM16(0xDB5804 + i * 2) == s_load_enemy[k])
+                break;
+        if (i < n || n >= 0xFF)
+            continue;
+        MEM16(0xDB5804 + n * 2) = s_load_enemy[k];
+        MEM32(0xDB5400 + n * 4) = 0;
+        MEM8(0xDB5A02) = (uint8_t)(n + 1);
+    }
 }
