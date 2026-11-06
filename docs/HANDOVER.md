@@ -263,3 +263,4 @@ mode with automatic logs, enemy naming tools, 64-row enemy table, docs. All push
 
 ### char_pool_extra (2026-11-06)
 Grows character pool 0 by N bytes taken from the general pool so titan fits in chapter 1. Re-run tools/patch_char_pool.py after regenerating gen. Result: pending user test.
+Result 2026-11-06: hang on area load. Cross-chapter titan shelved.
