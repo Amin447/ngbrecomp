@@ -1,5 +1,8 @@
 # Function map
 
+> **New here?** Start with `docs/HANDOVER.md` (the whole project: setup, mods, tools, findings, next steps). This file holds the detailed addresses and functions. Keep both updated.
+
+
 What each game function does, as far as we know. `tools/rec_analyze.py` reads the table rows
 below (`| sub_XXXXXXXX | name | ...`) and shows the names next to its results.
 
