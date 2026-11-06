@@ -217,6 +217,20 @@ dumped now. Types missing from it can be named by size (header + 0x0C) against t
   Genin here are cloned from a parent/generator object, so the type originates earlier.
 - Next idea: instead of decoding the script, find the function that queues a chr_*.afs load on the
   game thread and call it for titan at area start (load_enemy option).
+- **Breakthrough (2026-11-06):** each area builds a list of *global file numbers* to load at
+  0xDB5804 (u16, count byte 0xDB5A02; 0xDB5400 is a parallel u32 array, set to 0). The numbers are
+  entries of load_img.bin (header: +4 count 0xD12; then 8-byte entries {size, category}); the loaded
+  file table at 0xDB33E0 (0x20 bytes a slot: +0 start, +4 end, +8 size, +0x14 u16 file number).
+  A chr_*.afs entry's number is found by matching its size with load_img.bin entries.
+  Genin: 0x8A 0x8B 0x2C4 0x343 0x388 0x4F5 0x4FF 0x844 0x849 0x8C1 (ryu.chr entry 0 is 0x5E).
+  Titan: 0xABC 0xABD 0xABE 0xAC7? 0xAC8 0xAC9 0xB04? 0xB16 (? = guessed between same-size files).
+- New options: `load_files=` (add file numbers to the area list, mymod_load_enemies, every frame),
+  `load_files_when=` (only lists that hold that number), `drop_files=` (remove numbers).
+  Test: load_files=titan + enemy_swap=0xE:0x56 -> **titans appeared in chapter 1, then the game
+  crashed** when the next area list (28 files + titan) loaded: likely out of memory. Now testing with
+  load_files_when=0x8A and drop_files=0x8A,0x8B (remove Genin's model files).
+- sub_002E1C80 (patched by tools/patch_load_enemy.py) also appends to that list but did not run in
+  chapter 1; recordings/needed.txt and chr_slots.txt log the list and the table (NGB_SPAWN_LOG).
 - Earlier plan: decode the stry_dat script commands (find the command whose argument is type 0x0E or
   genin's archive number), then patch it when the block is read to request titan (chr_titan).
 
