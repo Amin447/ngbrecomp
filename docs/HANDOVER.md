@@ -208,7 +208,16 @@ dumped now. Types missing from it can be named by size (header + 0x0C) against t
   most likely script commands; Genin also loads a different chr_genin entry on the other difficulty.
 - Ayane is most likely type 0x3D (named from the archive read; 0x3B has the same size and hp and
   may be a variant). Not yet confirmed by a hit.
-- Next: decode the stry_dat script commands (find the command whose argument is type 0x0E or
+- Spawn records are built in memory at run time (e.g. 0x0137DF50), not copied from a file.
+  NGB_SPAWN_LOG now also writes recordings/spawn_records.txt (record address, 0x60 bytes, call
+  chain); spawn reads go through mymod_enemy_pick_rec(rec) (tools/patch_enemy_pick.py).
+- Genin spawn chain: sub_002DF750 > sub_002E3AD0 > sub_002E4630 > sub_002E4790 (event/area manager)
+  > sub_002E58D0 > sub_002F7580 > sub_002CD040 (spawn). sub_002F7580 copies the type (+0x2774),
+  kind partner (+0x2791), position (+0x8C0) etc. from an existing object (edi) into the record:
+  Genin here are cloned from a parent/generator object, so the type originates earlier.
+- Next idea: instead of decoding the script, find the function that queues a chr_*.afs load on the
+  game thread and call it for titan at area start (load_enemy option).
+- Earlier plan: decode the stry_dat script commands (find the command whose argument is type 0x0E or
   genin's archive number), then patch it when the block is read to request titan (chr_titan).
 
 ## 6. Status and next steps

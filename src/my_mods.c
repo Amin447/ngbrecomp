@@ -404,3 +404,25 @@ void mymod_frame(void)
         s_mtn = va;
     }
 }
+
+/* Spawn functions call this with the spawn record (generated code, tools/patch_enemy_pick.py).
+ * With NGB_SPAWN_LOG it writes recordings/spawn_records.txt: the record's guest address and its
+ * first 0x60 bytes, to find which loaded file the records come from (see all_loads.txt bufs). */
+uint16_t mymod_enemy_pick_rec(uint32_t rec)
+{
+    if (getenv("NGB_SPAWN_LOG")) {
+        static FILE *f;
+        if (!f) f = fopen("recordings/spawn_records.txt", "w");
+        if (f) {
+            fprintf(f, "rec %08X type %04X :", rec, MEM16(rec + 0x50));
+            for (uint32_t q = 0; q < 0x60; q += 4) fprintf(f, " %08X", MEM32(rec + q));
+            fprintf(f, " | stack");
+            for (uint32_t q = 0; q < 0x2000; q += 4) {
+                uint32_t v = MEM32(esp + q);
+                if (v >= 0x11000 && v < 0x329000) fprintf(f, " %X@%X", v, q);
+            }
+            fputc(10, f); fflush(f);
+        }
+    }
+    return mymod_enemy_pick(MEM16(rec + 0x50));
+}

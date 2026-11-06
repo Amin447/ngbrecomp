@@ -382,7 +382,7 @@ static void tn_read_hook(const char *path, uint64_t off, size_t len)
     {   /* recordings/all_loads.txt: every file read in order (find which level file lists enemies) */
         static FILE *af;
         if (!af) { make_dir("recordings"); af = fopen("recordings/all_loads.txt", "w"); }
-        if (af) { fprintf(af, "%s off %llX len %zX\n", b, (unsigned long long)off, len); fflush(af); }
+        if (af) { fprintf(af, "%s off %llX len %zX buf %08X\n", b, (unsigned long long)off, len, (uint32_t)((intptr_t)xbox_FileReadBuffer - g_xbox_mem_offset)); fflush(af); }
     }
     if (strncmp(b, "chr_", 4) != 0)
         return;
