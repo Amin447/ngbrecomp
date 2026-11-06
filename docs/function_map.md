@@ -262,3 +262,5 @@ holds its start, the next record its end):
 Cross-chapter enemies (titan in chapter 1) load but then the area hangs or loses parts: they do
 not fit the fixed pools. Idea: grow a character pool by taking bytes from the 0x173E000 pool
 (patch the adds in sub_00167650).
+
+- **char_pool_extra=N** (mods.txt, tools/patch_char_pool.py): sub_00167650 adds N bytes to character pool 0 (0xDB9A04, 0x226000) and takes them from the general pool (0xDB9A54, 0x173E000). Testing 0x200000 for titan in chapter 1.

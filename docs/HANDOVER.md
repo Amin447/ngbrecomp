@@ -260,3 +260,6 @@ mode with automatic logs, enemy naming tools, 64-row enemy table, docs. All push
 3. Find where a soldier's equipment / an enemy's look is set at creation (for SWAT kinds, ninja clans).
 4. Combo swaps that depend on the previous move (move_swap applies everywhere today).
 5. Find the cause of the occasional start-up disc error (`recordings/stderr.txt`).
+
+### char_pool_extra (2026-11-06)
+Grows character pool 0 by N bytes taken from the general pool so titan fits in chapter 1. Re-run tools/patch_char_pool.py after regenerating gen. Result: pending user test.
