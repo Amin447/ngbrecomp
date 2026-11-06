@@ -104,6 +104,7 @@ types during boot.
   (Ryu's current move and its animation, his action byte, the type and spawn fields of the last
   thing he hit). Built on the game thread; the window thread only reads copies (reading guest
   memory there crashed the game).
+- Object slots: up to 128 looked at (the first 48 only until 2026-11-06, which could miss bosses); a slot counts when its +0x26D8 leads to a chr_/itm_ file.
 - `recordings/objects.txt`: snapshot of all object slots when they change (type, health block,
   position, variant fields).
 - `recordings/spawns.txt` (`NGB_SPAWN_LOG=1`): every type read by the spawn code, with frame.
