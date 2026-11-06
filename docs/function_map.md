@@ -143,7 +143,7 @@ what Ryu plays.
 
 **What does not change a SWAT soldier (tested in game):** setting its kind (+0x277A, with +0x2791) or swapping its weapon objects' types (0x135 knife, 0x137 gun, 0x139 grenade, 0x13B shield; they are objects of their own) changes only those numbers. The look and fighting come from data set when the soldier and its weapons are made.
 
-**Enemy types found so far** (type: model file; tools/name_types.py): 0x0000 ryu; 0x000E Genin and 0x0044 white-clad ninja, 0x006B chapter 5 ninja (all genin.chr); 0x0017 yonin.chr (seen in a mission); 0x001C bat; 0x005C swat.chr.
+**Enemy types found so far** (type: model file; tools/name_types.py): 0x0000 ryu; 0x000E Genin and 0x0044 white-clad ninja, 0x006B chapter 5 ninja (all genin.chr); 0x0017 yonin.chr (seen in a mission); 0x001C bat; 0x005C swat.chr; 0x0021 and 0x004E dinosaurs (garra.chr, two kinds); 0x0019 insect (hamu.chr).
 
 ## Memory
 
