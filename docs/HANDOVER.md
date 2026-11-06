@@ -6,7 +6,7 @@ failed and why, and what is left. **Keep it up to date**: after each piece of wo
 "Status" and "Next steps" and the date below. Exact addresses and function details are in
 `docs/function_map.md`; the enemy table is `docs/enemy_types.csv`.
 
-Last updated: 2026-11-06 (enemy table 60 rows).
+Last updated: 2026-11-06 (enemy table 64 rows).
 
 ---------------------------------------------------------------------------------------------------
 
@@ -170,13 +170,13 @@ types during boot.
 - Weapons and props are objects too, with types of their own (SWAT: 0x135 knife, 0x137 gun,
   0x139 grenade, 0x13B shield; 0x0003 Ryu's hand; types above 0xFF exist).
 
-### 5.3 Enemy types found (full table with health: `docs/enemy_types.csv`, 60 rows)
+### 5.3 Enemy types found (full table with health: `docs/enemy_types.csv`, 64 rows)
 Ninjas: 0x000E Genin, 0x0044 white-clad, 0x006B chapter 5 (all genin.chr); 0x0017 yonin; 0x005D hanin;
 0x0011 and 0x0016 kage. Bosses (by health): 0x0015 Murai 5000, 0x0020 kasek 13000 (4 bars, part 0x0039),
 0x0022 furau 10000, 0x0029 hyudo 9800 (parts 0x002A, 0x002B), 0x002C Doku 7500. Others: 0x0019 insect
 (hamu), 0x001C bat, 0x001E guuru, 0x0021/0x004E dinosaurs (garra), 0x0026/0x0060 horses, 0x0028/0x004B/
-0x006C riders, 0x0055/0x006D cat, 0x000F/0x0043 unagi, 0x0012 haiki, 0x0057 dino (4600, 2 bars), 0x005F s_kag, 0x0040 mist (swarm of 16), 0x0023 masa or rei, 0x000D army, 0x0013 second SWAT type (swat.chr, kinds 0-2), 0x005E m_arm, 0x0034 tank (parts 0x0037, 0x0038), 0x0056 titan, 0x0018 gamof, 0x0010 yoku (boss 13500, 2 bars), 0x0024 Alma (aruma, 7000), 0x0045 Awakened Alma (s_aru, 12000; part 0x0046), 0x001B Rachel (rei, likely), 0x001D sohei, 0x0067 Evil Ryu (e_ryu, 7000; confirmed), 0x0025 Marbus (marub, 15000), 0x0027 Fiend Murai (s_mur, 12000), 0x002F Spirit Doku (s_dok, 7000; part 0x0033), 0x0059 Nicchae (hit type confirmed) and 0x0054 Ishtaros (very likely): these bosses' +0x26D8 is a small itm_dat2 file, not a .chr, so their model is loaded another way (name them by hit type, not by name_types.py), 0x002E s_swa, 0x005C SWAT (kinds by +0x277A), 0x0031 sumau part, 0x0047 b_grd.
-Health in types_info.txt is only meaningful for characters: for items/props the health block number is not theirs and the value is noise. Boss health does not change between missions (Alma 7000, Marbus 15000, Doku 7500 in two sessions each). Names come from the game's file names; the user's descriptions turn them into in-game names.
+0x006C riders, 0x0055/0x006D cat, 0x000F/0x0043 unagi, 0x0012 haiki, 0x0057 dino (4600, 2 bars), 0x005F s_kag, 0x0040 mist (swarm of 16), 0x0023 masa (byte compare), 0x003A crow, 0x004D ario, 0x0069 fish or mimic (swarm), 0x003B unidentified tiny part, 0x000D army, 0x0013 second SWAT type (swat.chr, kinds 0-2), 0x005E m_arm, 0x0034 tank (parts 0x0037, 0x0038), 0x0056 titan, 0x0018 gamof, 0x0010 yoku (boss 13500, 2 bars), 0x0024 Alma (aruma, 7000), 0x0045 Awakened Alma (s_aru, 12000; part 0x0046), 0x001B Rachel (rei, likely), 0x001D sohei, 0x0067 Evil Ryu (e_ryu, 7000; confirmed), 0x0025 Marbus (marub, 15000), 0x0027 Fiend Murai (s_mur, 12000), 0x002F Spirit Doku (s_dok, 7000; part 0x0033), 0x0059 Nicchae (hit type confirmed) and 0x0054 Ishtaros (very likely): these bosses' +0x26D8 is a small itm_dat2 file, not a .chr, so their model is loaded another way (name them by hit type, not by name_types.py), 0x002E s_swa, 0x005C SWAT (kinds by +0x277A), 0x0031 sumau part, 0x0047 b_grd.
+Health in types_info.txt is only meaningful for characters: for items/props the health block number is not theirs and the value is noise. Caution: the first data dump of a type is sometimes an itm file although the type is a character (an object slot's type can outlive the object, or the slot is reused); types_info.txt and the user's hit types are more reliable. Boss health does not change between missions (Alma 7000, Marbus 15000, Doku 7500 in two sessions each). Names come from the game's file names; the user's descriptions turn them into in-game names.
 Types sharing a .chr point at the very same loaded files, so the clan / look (e.g. Jonin
 textures) is set elsewhere: not yet found. Red ninjas seen in a mission: type still unknown.
 Fixed 2026-11-06: typedata.txt skipped types the old address namer had named; every new type is
@@ -196,7 +196,7 @@ dumped now. Types missing from it can be named by size (header + 0x0C) against t
 ## 6. Status and next steps
 
 **Done:** builds (Linux and Windows), damage, animation, combo and enemy swaps, ShowAction research
-mode with automatic logs, enemy naming tools, 60-row enemy table, docs. All pushed to `my-mods`.
+mode with automatic logs, enemy naming tools, 64-row enemy table, docs. All pushed to `my-mods`.
 
 **Next steps (pick with the user):**
 1. Grow the enemy table: the user plays missions with ShowAction.bat; run `tools/name_types.py`
