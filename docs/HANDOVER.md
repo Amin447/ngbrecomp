@@ -6,7 +6,7 @@ failed and why, and what is left. **Keep it up to date**: after each piece of wo
 "Status" and "Next steps" and the date below. Exact addresses and function details are in
 `docs/function_map.md`; the enemy table is `docs/enemy_types.csv`.
 
-Last updated: 2026-11-06 (enemy table 38 rows).
+Last updated: 2026-11-06 (enemy table 46 rows).
 
 ---------------------------------------------------------------------------------------------------
 
@@ -169,12 +169,12 @@ types during boot.
 - Weapons and props are objects too, with types of their own (SWAT: 0x135 knife, 0x137 gun,
   0x139 grenade, 0x13B shield; 0x0003 Ryu's hand; types above 0xFF exist).
 
-### 5.3 Enemy types found (full table with health: `docs/enemy_types.csv`, 38 rows)
+### 5.3 Enemy types found (full table with health: `docs/enemy_types.csv`, 46 rows)
 Ninjas: 0x000E Genin, 0x0044 white-clad, 0x006B chapter 5 (all genin.chr); 0x0017 yonin; 0x005D hanin;
 0x0011 and 0x0016 kage. Bosses (by health): 0x0015 Murai 5000, 0x0020 kasek 13000 (4 bars, part 0x0039),
 0x0022 furau 10000, 0x0029 hyudo 9800 (parts 0x002A, 0x002B), 0x002C Doku 7500. Others: 0x0019 insect
 (hamu), 0x001C bat, 0x001E guuru, 0x0021/0x004E dinosaurs (garra), 0x0026/0x0060 horses, 0x0028/0x004B/
-0x006C riders, 0x0055/0x006D cat, 0x000F/0x0043 unagi, 0x0012 haiki, 0x0057 dino (4600, 2 bars), 0x005F s_kag, 0x0040 mist (swarm of 16), 0x0023 masa or rei, 0x005C SWAT (kinds by +0x277A), 0x0031 sumau part, 0x0047 b_grd.
+0x006C riders, 0x0055/0x006D cat, 0x000F/0x0043 unagi, 0x0012 haiki, 0x0057 dino (4600, 2 bars), 0x005F s_kag, 0x0040 mist (swarm of 16), 0x0023 masa or rei, 0x000D army, 0x0013 second SWAT type (swat.chr, kinds 0-2), 0x005E m_arm, 0x0034 tank (parts 0x0037, 0x0038), 0x0056 titan, 0x0018 gamof, 0x005C SWAT (kinds by +0x277A), 0x0031 sumau part, 0x0047 b_grd.
 Names come from the game's file names; the user's descriptions turn them into in-game names.
 Types sharing a .chr point at the very same loaded files, so the clan / look (e.g. Jonin
 textures) is set elsewhere: not yet found. Red ninjas seen in a mission: type still unknown.
@@ -195,7 +195,7 @@ dumped now. Types missing from it can be named by size (header + 0x0C) against t
 ## 6. Status and next steps
 
 **Done:** builds (Linux and Windows), damage, animation, combo and enemy swaps, ShowAction research
-mode with automatic logs, enemy naming tools, 38-row enemy table, docs. All pushed to `my-mods`.
+mode with automatic logs, enemy naming tools, 46-row enemy table, docs. All pushed to `my-mods`.
 
 **Next steps (pick with the user):**
 1. Grow the enemy table: the user plays missions with ShowAction.bat; run `tools/name_types.py`
