@@ -15,4 +15,5 @@ if "mymod_char_pool_extra" not in body:
 s = s[:i] + body + s[j:]
 if DECL not in s:
     s = s.replace('#include "recomp_funcs.h"' + NL, '#include "recomp_funcs.h"' + NL + DECL, 1)
+s = s.replace("    eax = eax + 0x173E000;" + NL, "    eax = eax + 0x173E000 - mymod_char_pool_extra();" + NL)   # pool reset at 0x0016A9C8 too
 g.write_text(s); print("ok", body.count("mymod_char_pool_extra"))
