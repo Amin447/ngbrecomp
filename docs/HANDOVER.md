@@ -193,6 +193,24 @@ dumped now. Types missing from it can be named by size (header + 0x0C) against t
 
 ---------------------------------------------------------------------------------------------------
 
+### 5.5 How an area picks its enemies (research, 2026-11-06)
+
+- Cross-chapter enemy_swap fails because the game only spawns types whose chr_*.afs is loaded,
+  and each area loads a fixed set (chapter 1 / yasik: ayane, crow, genin, jonin, bat, murai, rat).
+- Archive reads run on the game's loader thread (thread entry sub_00333070 -> sub_003399F0 ->
+  sub_00339940 worker table at 0x45F320); the stack never shows who asked, so call-chain logging is
+  a dead end. Archive names are not in the XBE.
+- recordings/all_loads.txt (ShowAction build) logs every file read. Normal vs another difficulty in
+  chapter 1 differ in one block: yasik_cmn.afs entry at 0x800 (Normal) vs 0x6A4800 (other
+  difficulty), about 0x33000 bytes, magic "stry_dat" (story data). Header: +0x0C size, +0x10 count 3,
+  section offsets at +0x20 (0x30 / 0x32070 / 0x328F0 on Normal). Section 1 is a script (records
+  like 02 00 00 86 <id> <args...>), section 2 is position/float data. Enemy spawns and chr loads are
+  most likely script commands; Genin also loads a different chr_genin entry on the other difficulty.
+- Ayane is most likely type 0x3D (named from the archive read; 0x3B has the same size and hp and
+  may be a variant). Not yet confirmed by a hit.
+- Next: decode the stry_dat script commands (find the command whose argument is type 0x0E or
+  genin's archive number), then patch it when the block is read to request titan (chr_titan).
+
 ## 6. Status and next steps
 
 **Done:** builds (Linux and Windows), damage, animation, combo and enemy swaps, ShowAction research
