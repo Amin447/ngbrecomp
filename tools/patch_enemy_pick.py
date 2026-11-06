@@ -3,7 +3,7 @@
 # record's type (+0x50) through mymod_enemy_pick (src/my_mods.c, enemy_swap).
 import os, pathlib, re
 repo = pathlib.Path(os.path.expanduser("~/ngbrecomp"))
-DECL = "uint16_t mymod_enemy_pick(uint16_t type);   /* src/my_mods.c */\n"
+DECL = "uint16_t mymod_enemy_pick_rec(uint32_t rec);   /* src/my_mods.c */\n"
 for f, fns in [("recomp_0010.c", ["sub_00153100", "sub_00153333"]), ("recomp_0024.c", ["sub_002CD040"]),
                ("recomp_0026.c", ["sub_002F2CC0"])]:
     g = repo / "src/recomp/gen" / f
@@ -11,7 +11,7 @@ for f, fns in [("recomp_0010.c", ["sub_00153100", "sub_00153333"]), ("recomp_002
     for fn in fns:
         i = s.index(f"void {fn}(void)\n{{"); j = s.index("\n}\n", i)
         b = re.sub(r"SET_LO16\((\w+), MEM16\((\w+) \+ 0x50\)\);",
-                   r"SET_LO16(\1, mymod_enemy_pick(MEM16(\2 + 0x50)));   /* my_mods.c: enemy_swap */", s[i:j])
+                   r"SET_LO16(\1, mymod_enemy_pick_rec(\2));   /* my_mods.c: enemy_swap */", s[i:j])
         s = s[:i] + b + s[j:]
     if DECL not in s:
         s = s.replace('#include "recomp_funcs.h"\n', '#include "recomp_funcs.h"\n' + DECL, 1)
