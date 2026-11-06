@@ -455,6 +455,63 @@ static void tn_frame(void)
     fclose(f);
 }
 
+/* ---- Per-type properties (NGB_SHOW_ACTION): recordings/types_info.txt, rewritten every 10 s:
+ * most seen at once, highest health and its segments, the behavior group (0x423600[type]),
+ * the kinds seen (+0x277A), the data file's magic and size. ---- */
+static struct {
+    uint16_t most, hp, segs; uint32_t group, size; char magic[9]; uint32_t kinds; uint8_t used;
+} s_ti[0x400];
+static void ti_frame(void)
+{
+    static unsigned tick;
+    if (++tick % 30)
+        return;
+    uint16_t now[0x400] = { 0 };
+    for (int i = 0; i < 48; i++) {
+        uint32_t o = 0x4B4E50u + 0x2800u * i, cd = MEM32(o + 0x26D8);
+        uint32_t t = MEM16(o + 0x2774);
+        if (!cd || t >= 0x400)
+            continue;
+        now[t]++;
+        if (!s_ti[t].used) {
+            s_ti[t].used = 1;
+            s_ti[t].group = MEM32(0x423600u + 4 * t);
+            for (int c = 0; c < 8; c++) {
+                uint8_t ch = MEM8(cd + c);
+                s_ti[t].magic[c] = ch >= 32 && ch < 127 ? (char)ch : '.';
+            }
+            s_ti[t].size = MEM32(cd + 0x0C);
+        }
+        uint32_t k = MEM16(o + 0x277A);
+        if (k < 32)
+            s_ti[t].kinds |= 1u << k;
+        if (i) {                                   /* not Ryu: his block is shared */
+            uint32_t blk = 0x58A3A0u + 0x210u * MEM8(o + 0x27F0);
+            uint16_t hp = MEM16(blk + 0x1C6), segs = 0;
+            for (int g = 0; g < 8; g++)
+                if (MEM16(blk + 0x184 + 2 * g) != 0xFFFF) segs++;
+            if (hp > s_ti[t].hp) { s_ti[t].hp = hp; s_ti[t].segs = segs; }
+        }
+    }
+    for (int t = 0; t < 0x400; t++)
+        if (now[t] > s_ti[t].most) s_ti[t].most = now[t];
+    if (tick % 300)
+        return;
+    make_dir("recordings");
+    FILE *f = fopen("recordings/types_info.txt", "w");
+    if (!f)
+        return;
+    fprintf(f, "type  most  hp     segs group     file      size     kinds\n");
+    for (int t = 0; t < 0x400; t++) {
+        if (!s_ti[t].used) continue;
+        fprintf(f, "%04X  %4u  %5u  %4u %08X  %-8s  %7X ", t, s_ti[t].most, s_ti[t].hp, s_ti[t].segs,
+                s_ti[t].group, s_ti[t].magic, s_ti[t].size);
+        for (int k = 0; k < 32; k++) if (s_ti[t].kinds >> k & 1) fprintf(f, " %d", k);
+        fputc(10, f);
+    }
+    fclose(f);
+}
+
 int ngb_show_action(void)
 {
     static int on = -1;
@@ -470,6 +527,7 @@ void ngb_action_watch_frame(void)
         return;
     mw_frame();
     tn_frame();
+    ti_frame();
     {
         static uint32_t s_title_hit = ~0u;
         if (ngb_last_hit_type != s_title_hit) {
