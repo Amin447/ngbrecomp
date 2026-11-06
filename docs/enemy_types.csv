@@ -51,6 +51,7 @@
 "005E","m_arm","chr_m_arm","m_arm (armored soldier)","1200","1","",""
 "005F","s_kag","chr_s_kag","s_kag (kage leader / boss-like ninja)","950","1","",""
 "0060","horse","chr_horse","Horse, second kind","6500","2","",""
+"0067","e_ryu","chr_e_ryu","e_ryu: an enemy Ryu (doppelganger / dark Ryu)","7000","1","","biggest .chr in the game (0x2A500), like Ryu's; uses his weapons (chr_e_ryu.afs has e_kata, e_flail, e_hammer, ...)"
 "006B","genin","chr_genin","Ninja (chapter 5)","770","1","",""
 "006C","rider","chr_rider","Rider, third kind","1200","1","",""
 "006D","cat","chr_cat","cat, second kind","1000","1","",""
