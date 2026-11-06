@@ -303,9 +303,20 @@ static void mw_frame(void)
  * written to recordings/objects.txt: slot, that pointer, the first bytes it points at, the
  * health block (+0x27F0) and its health sum, the health-bar id (+0x2774), the position
  * (+0x8C0) and the object's first 16 bytes. Used to find which field says the enemy type. ---- */
+/* An object slot holds an object when its data pointer (+0x26D8) leads to a loaded "chr_" or
+ * "itm_" file. Slots past the real list (up to 128 are looked at) hold other data. */
+#define OBJ_SLOTS 128
+static int ol_valid(uint32_t cd)
+{
+    if (cd < 0x10000 || (cd >= 0x04000000 && cd < 0x80000000u) || cd >= 0x88000000u)
+        return 0;
+    uint32_t m = MEM32(cd);
+    return m == 0x5F726863u /* "chr_" */ || m == 0x5F6D7469u /* "itm_" */;
+}
+
 #define OL_BASE 0x4B4E50u
 #define OL_STEP 0x2800u
-#define OL_SLOTS 48
+#define OL_SLOTS OBJ_SLOTS
 static void ol_frame(void)
 {
     static unsigned tick, snap;
@@ -316,6 +327,8 @@ static void ol_frame(void)
     int diff = 0;
     for (int i = 0; i < OL_SLOTS; i++) {
         now[i] = MEM32(OL_BASE + OL_STEP * i + 0x26D8);
+        if (!ol_valid(now[i]))
+            now[i] = 0;
         if (now[i] != last[i])
             diff = 1;
     }
@@ -390,10 +403,10 @@ static void tn_frame(void)
     if (++tick % 30)
         return;
     int found = 0;
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < OBJ_SLOTS; i++) {
         uint32_t o = 0x4B4E50u + 0x2800u * i, cd = MEM32(o + 0x26D8);
         uint32_t t = MEM16(o + 0x2774);
-        if (!cd || t >= 0x400)
+        if (!ol_valid(cd) || t >= 0x400)
             continue;
         if (!s_td_done[t]) {               /* its data's first bytes, matched to the archives offline */
             s_td_done[t] = 1;
@@ -469,10 +482,10 @@ static void ti_frame(void)
     if (++tick % 30)
         return;
     uint16_t now[0x400] = { 0 };
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < OBJ_SLOTS; i++) {
         uint32_t o = 0x4B4E50u + 0x2800u * i, cd = MEM32(o + 0x26D8);
         uint32_t t = MEM16(o + 0x2774);
-        if (!cd || t >= 0x400)
+        if (!ol_valid(cd) || t >= 0x400)
             continue;
         now[t]++;
         if (!s_ti[t].used) {
