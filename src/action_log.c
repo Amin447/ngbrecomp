@@ -370,6 +370,18 @@ static void (*s_tn_prev)(const char *, uint64_t, size_t);
 static char s_tn_type[0x400][16];
 static unsigned char s_td_done[0x400];
 
+static char s_area_file[32];   /* last stage archive read (not chr_/cmn/spr/bgm/demo) */
+/* Name of the chr_*.afs whose read filled guest address va (recent reads), or NULL. */
+const char *tn_name_at(uint32_t va)
+{
+    for (uint32_t k = 0; k < TN_READS && k < s_tn_n; k++) {
+        uint32_t i = (s_tn_n - 1 - k) % TN_READS;
+        if (s_tn_read[i].va == va) return s_tn_read[i].name;
+    }
+    return 0;
+}
+const char *tn_area_file(void) { return s_area_file; }
+
 static void tn_read_hook(const char *path, uint64_t off, size_t len)
 {
     if (s_tn_prev)
@@ -384,8 +396,13 @@ static void tn_read_hook(const char *path, uint64_t off, size_t len)
         if (!af) { make_dir("recordings"); af = fopen("recordings/all_loads.txt", "w"); }
         if (af) { fprintf(af, "%s off %llX len %zX buf %08X\n", b, (unsigned long long)off, len, (uint32_t)((intptr_t)xbox_FileReadBuffer - g_xbox_mem_offset)); fflush(af); }
     }
-    if (strncmp(b, "chr_", 4) != 0)
+    if (strncmp(b, "chr_", 4) != 0) {
+        size_t L = strlen(b);
+        if (L > 4 && L < sizeof s_area_file && !strcmp(b + L - 4, ".afs") && strncmp(b, "cmn", 3) && strncmp(b, "spr", 3)
+            && strncmp(b, "bgm", 3) && strncmp(b, "demo", 4) && strncmp(b, "sse", 3) && strncmp(b, "live", 4))
+            strcpy(s_area_file, b);
         return;
+    }
     {   /* recordings/chr_loads.txt: the read and the code addresses on the game's stack (call chain) */
         static FILE *lf;
         if (!lf) {

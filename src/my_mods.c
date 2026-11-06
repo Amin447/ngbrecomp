@@ -483,10 +483,36 @@ uint16_t mymod_enemy_pick_rec(uint32_t rec)
  * the loader (sub_0016CC60 etc.) then loads a file for every listed type. */
 
 /* Debug (NGB_SPAWN_LOG): recordings/needed.txt, the game's needed-types list when it changes. */
+const char *tn_name_at(uint32_t va);   /* action_log.c */
+const char *tn_area_file(void);
+/* recordings/area_chars.txt: area file + room + chr archives in the loaded-file table, on change */
+static void area_chars_dump(void)
+{
+    static FILE *f; static char last[512];
+    char cur[512]; size_t n = 0; char seen[64][16]; int ns = 0;
+    n += snprintf(cur + n, sizeof cur - n, "%s room %u:", tn_area_file(), MEM16(0xDB9AC2));
+    for (uint32_t sl = 0; sl < 64; sl++) {
+        uint32_t a = 0xDB33E0 + sl * 0x20;
+        if (!MEM32(a) || MEM16(a + 0x14) == 0xFFFF) continue;
+        const char *nm = tn_name_at(MEM32(a));
+        if (!nm) continue;
+        int dup = 0;
+        for (int k = 0; k < ns; k++) if (!strcmp(seen[k], nm)) dup = 1;
+        if (dup || ns >= 64) continue;
+        strncpy(seen[ns], nm, 15); seen[ns][15] = 0; ns++;
+        if (n < sizeof cur - 20) n += snprintf(cur + n, sizeof cur - n, " %s", nm);
+    }
+    if (!strcmp(cur, last)) return;
+    strcpy(last, cur);
+    if (!f) f = fopen("recordings/area_chars.txt", "w");
+    if (f) { fprintf(f, "frame %u %s%c", mymod_frames, cur, 10); fflush(f); }
+}
+
 static void needed_dump(const char *why)
 {
     static FILE *f; static uint32_t last;
     if (!getenv("NGB_SPAWN_LOG")) return;
+    area_chars_dump();
     {   /* also recordings/chr_slots.txt: the loaded chr table at 0xDB33E0 (0x20 bytes a slot) */
         static FILE *sf; static uint32_t sl;
         uint32_t hh = 0;
