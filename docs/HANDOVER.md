@@ -288,3 +288,6 @@ Not reached: Murai's areas (Murai/Ayane load only there). A script swap works on
 same area (e.g. Jonin->Genin anywhere, Genin->Jonin only in yasik_03/02, ->bat in yasik_02).
 Room field 0xDB9AC2 read 0 here (wrong address); the area archive read is the reliable marker.
 The start of the log also shows a one-time read of every stage archive header (menu scan), ignore it.
+
+### Missions (2026-11-07)
+Missions = m_NN*.sty stage scripts in *_cmn.afs (82 found). Table: docs/missions.md (tools/ngb_missions.py). g_*.grp are geometry, not load lists. Open: where a mission chooses its chr loads.
