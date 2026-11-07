@@ -508,11 +508,39 @@ static void area_chars_dump(void)
     if (f) { fprintf(f, "frame %u %s%c", mymod_frames, cur, 10); fflush(f); }
 }
 
+/* recordings/load_keys.txt: character load keys set per room by sub_002ED290 from the stage script:
+ * 0xD52D00 (4 bytes each: u16 value, u8 pool, u8 extra; pool 0xFF = unused) and 0xD69F80 (6 bytes each). */
+static void load_keys_dump(void)
+{
+    static FILE *f; static uint32_t last;
+    uint32_t h = MEM32(0xDB9350);
+    for (uint32_t q = 0; q < 0x80; q += 4) h = h * 33 + MEM32(0xD52D00 + q);
+    for (uint32_t q = 0; q < 0x60; q += 4) h = h * 33 + MEM32(0xD69F80 + q);
+    if (h == last) return;
+    last = h;
+    if (!f) f = fopen("recordings/load_keys.txt", "w");
+    if (!f) return;
+    uint32_t ctx = MEM32(0xDB9350);
+    fprintf(f, "frame %u %s room %u ctx %08X +20=%08X | A:", mymod_frames, tn_area_file(), MEM16(0xDB9AC2), ctx,
+            ctx >= 0x10000 && ctx < 0x8000000 ? MEM32(ctx + 0x20) : 0);
+    for (uint32_t k = 0; k < 32; k++) {
+        uint32_t a = 0xD52D00 + k * 4;
+        if (MEM8(a + 2) != 0xFF) fprintf(f, " %X/%X/%X", MEM8(a + 2), MEM16(a), MEM8(a + 3));
+    }
+    fprintf(f, " | B:");
+    for (uint32_t k = 0; k < 16; k++) {
+        uint32_t a = 0xD69F80 + k * 6;
+        if (MEM8(a + 4) != 0xFF) fprintf(f, " %X/%X/%X", MEM8(a + 4), MEM16(a), MEM8(a + 5));
+    }
+    fputc(10, f); fflush(f);
+}
+
 static void needed_dump(const char *why)
 {
     static FILE *f; static uint32_t last;
     if (!getenv("NGB_SPAWN_LOG")) return;
     area_chars_dump();
+    load_keys_dump();
     {   /* also recordings/chr_slots.txt: the loaded chr table at 0xDB33E0 (0x20 bytes a slot) */
         static FILE *sf; static uint32_t sl;
         uint32_t hh = 0;
