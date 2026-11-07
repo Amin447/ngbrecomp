@@ -275,3 +275,16 @@ yasik_cmn.afs (userdata/Cache, Normal block at 0x800) stry_dat = Sigma btl/sty V
 Update 2026-11-07: op 0x69 = cutscene placement; **op 0x5b(0, TYPE, ...) = gameplay spawn** (Jonin 4, Genin 59; 0x0f(0, TYPE) = count/check). Jonin->Ayane 0x3D via 0x5b: Jonin gone, nothing spawned (0x3D = cutscene-only Ayane, no fighter). Do not patch 0xd6 (flag ids). Use: ngb_sty_swap.py afs 0x800 FROM TO 0x5b,0x0f. Original restored.
 Confirmed 2026-11-07: Jonin->Genin via 0x5b/0x0f works (Genin spawn at Jonin spots). Jonin->Murai 0x15 spawned nothing: the new type must be loaded in that area (Murai files only load in his areas). Rule: script swaps work for types the area already loads.
 Area map (2026-11-07): ShowAction build writes recordings/area_chars.txt (area archive, room 0xDB9AC2, chr archives in the loaded-file table) on every change. tools/ngb_join.py names file numbers from chr_loads + chr_slots. File numbers name files inside archives (genin.afs: 8A genin.kmd, 8B genin.mtn, 388 genin.chr, 844 genin.wva; 2C4/4F5/849 ninjatou, 343/4FF/8C1 syuri_02); load_img sizes are unpacked sizes.
+
+### Chapter 1 areas: loaded enemies (area_chars.txt, 2026-11-07, Normal, partial run)
+| Area archive (order played) | Enemies loaded |
+|---|---|
+| yasik_05 (start) | genin |
+| yasik_03 | genin, jonin |
+| yasik_02 | genin, jonin, bat, crow |
+| yasik_01 | genin |
+| yasik_00 | genin, crow, rat |
+Not reached: Murai's areas (Murai/Ayane load only there). A script swap works only to a type loaded in the
+same area (e.g. Jonin->Genin anywhere, Genin->Jonin only in yasik_03/02, ->bat in yasik_02).
+Room field 0xDB9AC2 read 0 here (wrong address); the area archive read is the reliable marker.
+The start of the log also shows a one-time read of every stage archive header (menu scan), ignore it.
