@@ -341,3 +341,6 @@ Also swap the type in ops **0xa5**(group id, TYPE) and **0x5c**(0, TYPE): they w
 ## Locked doors after a swap: solved (2026-11-08, tested: door opens)
 Spawns `0x5b(1, TYPE, area)` and their `0x0f(1, TYPE)` checks are **door-entrance spawns** (enemy bursts in through a door). A non-ninja enemy (cat) cannot do that entrance, the event never ends and the door stays locked. Keep those as the original type. `ngb_sty_swap.py` now skips them by default (`--doors` to force), swaps ops 0x5b,0x0f,0xa5,0x5c by default, and no longer changes the spawn kind.
 Working chapter 1: `python -I ngb_sty_swap.py <Cache>/yasik_cmn.afs 0x800 0xe 0x55` (cats in Genin spots, Genin still burst through doors).
+
+## Sigma extra chapters (2026-11-08)
+See docs/sigma_extra_chapters.md: Rachel chapters use NGB areas; blockers = script op numbering, playable Rachel, KMD model format. Next: Sigma->NGB stage-script op map.
