@@ -552,11 +552,38 @@ static void load_keys_dump(void)
     fputc(10, f); fflush(f);
 }
 
+/* recordings/ai_snap.bin (NGB_SPAWN_LOG): every 30 frames, the whole 0x2800-byte object of each enemy
+ * whose type (+0x2774) is in NGB_SNAP_TYPES (default 0x55 cat and 0x44 Jonin), plus Ryu (slot 0).
+ * Record: u32 frame, u32 slot, u32 type, then 0x2800 bytes. Used to find AI state fields. */
+static void ai_snap_dump(void)
+{
+    static FILE *f; static unsigned tick;
+    if (++tick % 30) return;
+    uint32_t want[8] = {0x55, 0x44}; int nw = 2;
+    const char *e = getenv("NGB_SNAP_TYPES");
+    if (e) { nw = 0; while (*e && nw < 8) { char *x; want[nw++] = (uint32_t)strtoul(e, &x, 0); if (x == e) break; e = x; while (*e == ',') e++; } }
+    for (uint32_t sl = 0; sl < 128; sl++) {
+        uint32_t o = 0x4B4E50u + 0x2800u * sl, cd = MEM32(o + 0x26D8);
+        if (cd < 0x10000 || cd >= 0x88000000u || (cd >= 0x04000000 && cd < 0x80000000u)) continue;
+        if (MEM32(cd) != 0x5F726863u) continue;   /* chr_ */
+        uint32_t t = MEM16(o + 0x2774); int ok = sl == 0;
+        for (int k = 0; k < nw; k++) if (t == want[k]) ok = 1;
+        if (!ok) continue;
+        if (!f) f = fopen("recordings/ai_snap.bin", "wb");
+        if (!f) return;
+        uint32_t h[3] = {mymod_frames, sl, t};
+        fwrite(h, 4, 3, f);
+        fwrite((const void *)(intptr_t)(g_xbox_mem_offset + (ptrdiff_t)o), 1, 0x2800, f);
+    }
+    if (f) fflush(f);
+}
+
 static void needed_dump(const char *why)
 {
     static FILE *f; static uint32_t last;
     if (!getenv("NGB_SPAWN_LOG")) return;
     area_chars_dump();
+    ai_snap_dump();
     load_keys_dump();
     {   /* also recordings/chr_slots.txt: the loaded chr table at 0xDB33E0 (0x20 bytes a slot) */
         static FILE *sf; static uint32_t sl;
