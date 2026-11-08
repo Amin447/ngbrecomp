@@ -74,6 +74,7 @@ static int s_ndrop;   /* drop_files: file numbers removed after load_files is ad
 static uint16_t s_vswap_type[8], s_vswap_from[8], s_vswap_to[8];
 static int s_nvswap;
 
+static void mf_add(const char *val);   /* mission_file, below */
 static void set_option(const char *key, const char *val)
 {
     if (!strcmp(key, "damage_taken")) s_taken = (float)atof(val);
@@ -87,6 +88,7 @@ static void set_option(const char *key, const char *val)
             s_nswap++;
         }
     }
+    else if (!strcmp(key, "mission_file")) mf_add(val);
     else if (!strcmp(key, "char_pool_extra")) s_char_pool_extra = (uint32_t)strtoul(val, NULL, 0) & ~0xFFFu;
     else if (!strcmp(key, "load_chars")) {
         const char *p = val;
@@ -162,6 +164,84 @@ uint32_t mymod_char_pool_extra(void)
     load_options();
     if (s_char_pool_extra > 0x1000000) s_char_pool_extra = 0x1000000;
     return s_char_pool_extra;
+}
+
+
+/* ---- mission_file (2026-11-09): play our own mission script instead of an existing mission's.
+ * mods.txt: mission_file=<mission number>:<archive>:<file inside>:<our file>
+ *   e.g. mission_file=0:yasik_cmn.afs:m_00mura.sty:custom/m_00.sty
+ * No game file is changed: after the game reads load_img.bin and the archive header, the mission's size is patched
+ * in memory (so the game makes room for a bigger script); after it reads the mission, our file is copied over it. */
+typedef struct { int mission; char arc[32], name[32]; uint8_t *data; uint32_t size; int64_t at; int idx; } MissionFile;
+static MissionFile s_mf[4]; static int s_nmf;
+extern void (*xbox_FileReadDoneHook)(const char *host_path, uint64_t offset, void *buffer, size_t got);
+static void (*s_mf_prev)(const char *, uint64_t, void *, size_t);
+
+static const char *mf_base(const char *p)
+{
+    const char *b = p + strlen(p);
+    while (b > p && b[-1] != '\\' && b[-1] != '/') b--;
+    return b;
+}
+
+static void mf_done_hook(const char *path, uint64_t off, void *buf, size_t got)
+{
+    if (s_mf_prev) s_mf_prev(path, off, buf, got);
+    if (!path) return;
+    const char *b = mf_base(path);
+    uint8_t *B = (uint8_t *)buf;
+    for (int i = 0; i < s_nmf; i++) {
+        MissionFile *m = &s_mf[i];
+        if (!strcmp(b, "load_img.bin") && off == 0) {          /* size table: mission N = file 0xB76 + N */
+            uint32_t e = 8 + 8 * (0xB76u + (uint32_t)m->mission);
+            if (e + 4 <= got) { memcpy(B + e, &m->size, 4); fprintf(stderr, "[MOD] mission_file: load_img size %u\n", m->size); }
+        }
+        else if (!strcmp(b, m->arc) && off == 0 && got >= 8 && !memcmp(B, "AFS", 3)) {   /* archive header */
+            if (m->idx < 0) {        /* find the entry by name in the archive's name table (read from the file itself) */
+                FILE *f = fopen(path, "rb");
+                uint32_t n; memcpy(&n, B + 4, 4);
+                if (f && 8 + 8 * n + 8 <= got) {
+                    uint32_t no, ns; memcpy(&no, B + 8 + 8 * n, 4); memcpy(&ns, B + 12 + 8 * n, 4);
+                    char rec[48];
+                    for (uint32_t k = 0; k < n; k++) {
+                        if (fseek(f, (long)(no + 48 * k), SEEK_SET) || fread(rec, 1, 48, f) != 48) break;
+                        rec[31] = 0;
+                        if (!strcmp(rec, m->name)) { m->idx = (int)k; uint32_t o; memcpy(&o, B + 8 + 8 * k, 4); m->at = o; break; }
+                    }
+                }
+                if (f) fclose(f);
+            }
+            if (m->idx >= 0 && 8 + 8 * (uint32_t)m->idx + 8 <= got) {
+                memcpy(B + 12 + 8 * m->idx, &m->size, 4);
+                fprintf(stderr, "[MOD] mission_file: %s %s at 0x%llX -> %u bytes\n", m->arc, m->name, (long long)m->at, m->size);
+            }
+        }
+        else if (m->at > 0 && !strcmp(b, m->arc) && (int64_t)off == m->at) {   /* the mission itself */
+            size_t n = m->size < got ? m->size : got;
+            memcpy(B, m->data, n);
+            fprintf(stderr, "[MOD] mission_file: mission %d replaced (%zu of %u bytes)\n", m->mission, n, m->size);
+        }
+    }
+}
+
+static void mf_add(const char *val)
+{
+    if (s_nmf >= 4) return;
+    MissionFile *m = &s_mf[s_nmf];
+    char host[200] = "";
+    if (sscanf(val, "%d:%31[^:]:%31[^:]:%199[^\r\n]", &m->mission, m->arc, m->name, host) != 4) {
+        fprintf(stderr, "[MOD] mission_file: bad line '%s'\n", val); return;
+    }
+    FILE *f = fopen(host, "rb");
+    if (!f) { fprintf(stderr, "[MOD] mission_file: cannot open %s\n", host); return; }
+    fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET);
+    m->data = (uint8_t *)malloc((size_t)n);
+    if (!m->data || fread(m->data, 1, (size_t)n, f) != (size_t)n) { fclose(f); free(m->data); return; }
+    fclose(f);
+    m->size = (uint32_t)n; m->idx = -1; m->at = 0;
+    s_nmf++;
+    if (!s_mf_prev && xbox_FileReadDoneHook != mf_done_hook) { s_mf_prev = xbox_FileReadDoneHook; xbox_FileReadDoneHook = mf_done_hook; }
+    fprintf(stderr, "[MOD] mission_file: mission %d = %s (%ld bytes)\n", m->mission, host, n);
 }
 
 static void load_options(void)
@@ -460,6 +540,7 @@ static void needed_dump(const char *why);
 void mymod_load_enemies(void);
 void mymod_frame(void)
 {
+    load_options();       /* installs the mission_file hook before any mission is loaded */
     mymod_frames++;
     needed_dump("frame");
     load_options();

@@ -37,6 +37,8 @@ void (*xbox_GuestDmaWriteHook)(void *host, size_t len);
 void (*xbox_FileReadHook)(const char *host_path, uint64_t offset, size_t len);
 /* The buffer of the read xbox_FileReadHook is called for (a hook may want where it goes). */
 void *volatile xbox_FileReadBuffer;
+/* Called after a read completed, with the bytes in Buffer: a mod may replace them (my_mods.c mission_file). */
+void (*xbox_FileReadDoneHook)(const char *host_path, uint64_t offset, void *buffer, size_t got);
 
 /* Get the ANSI path from OBJECT_ATTRIBUTES (platform-independent). */
 static const char* get_xbox_path(PXBOX_OBJECT_ATTRIBUTES ObjectAttributes)
@@ -283,6 +285,15 @@ NTSTATUS __stdcall xbox_NtReadFile(
      * starting, the Warnings screen's data), and a tracker of guest memory
      * (the GPU's dirty pages) unprotecting the buffer first -- ReadFile
      * into a write-protected page fails rather than faulting. */
+    char rd_path[1024]; rd_path[0] = 0;
+    LARGE_INTEGER rd_at = { 0 };
+    if (xbox_FileReadDoneHook) {
+        LARGE_INTEGER zero = { 0 };
+        DWORD n2 = GetFinalPathNameByHandleA(FileHandle, rd_path, sizeof rd_path, 0);
+        if (!n2 || n2 >= sizeof rd_path) rd_path[0] = 0;
+        if (ByteOffset && ByteOffset->QuadPart >= 0) rd_at = *ByteOffset;
+        else SetFilePointerEx(FileHandle, zero, &rd_at, FILE_CURRENT);
+    }
     if (xbox_FileReadHook) {
         char path[1024];
         LARGE_INTEGER at = { 0 }, zero = { 0 };
@@ -307,6 +318,8 @@ NTSTATUS __stdcall xbox_NtReadFile(
     }
 
     if (result || GetLastError() == ERROR_HANDLE_EOF) {
+        if (xbox_FileReadDoneHook && rd_path[0] && bytes_read)
+            xbox_FileReadDoneHook(rd_path, (uint64_t)rd_at.QuadPart, Buffer, bytes_read);
         IoStatusBlock->Information = bytes_read;
         if (bytes_read == 0 && Length > 0) {
             IoStatusBlock->Status = STATUS_END_OF_FILE;
@@ -974,7 +987,10 @@ NTSTATUS __stdcall xbox_NtReadFile(
      * tracker of guest memory (the GPU's dirty pages) unprotect it first. */
     if (xbox_GuestDmaWriteHook)
         xbox_GuestDmaWriteHook(Buffer, Length);
+    uint64_t rd_at = (uint64_t)lseek(fd, 0, SEEK_CUR);
     ssize_t n = read(fd, Buffer, Length);
+    if (n > 0 && xbox_FileReadDoneHook)
+        xbox_FileReadDoneHook(w32_handle_path(FileHandle), rd_at, Buffer, (size_t)n);
     if (n < 0) {
         XBOX_TRACE(XBOX_LOG_FILE, "NtReadFile(handle=%p) errno=%d", FileHandle, errno);
         IoStatusBlock->Status = STATUS_UNSUCCESSFUL;
