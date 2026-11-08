@@ -70,3 +70,8 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   different layouts in NGB (only 4, 5, 8 = box tables match). New converter mode `--container <ngb.sty>`: take an NGB
   file of the same area (all tables NGB-format) and put in only the converted rules (+ relocated battle data).
   Test 2: r_chrc03 rules in NGB `m_06arum.sty` (the Alma mission, Monastery) - other church missions restored.
+- **Test 2 result:** loaded, but no enemies and Start (pause) froze: all mission rules were removed, and Rachel's
+  rules use zones 183/188 while the Alma mission's arena is zone **187** (same room, same trigger box).
+  New options: `--drop-container-spawns` (keep the mission's rules, drop only its enemy spawns), `--zone-map 183:187,188:187`;
+  converted rules' flags are moved above the container's highest flag; the rule list is rewritten in place when it fits.
+  Test 3 command: `sigma2ngb_sty.py r_chrc03.sty r_chrc03.btl -o out --container m_06arum.sty --drop-container-spawns --zone-map 183:187,188:187`.
