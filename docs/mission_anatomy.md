@@ -1,0 +1,47 @@
+# How an NGB mission works (investigated 2026-11-08, for making our own mission)
+
+## 1. Where a mission comes from
+- **Script:** mission N = stage script `m_NN<area>.sty` inside the area's shared archive `<area>_cmn.afs`
+  (list: docs/missions.md). The archive it sits in decides the area (map, geometry, lighting).
+- **Global file table `game\load_img.bin`:** u32 version 0x10, u32 count 0xD12, then count x {u32 size, u32 category};
+  category 17 = every stage script (story + missions, 326). **Mission N = global file 0xB76 + N** (consecutive).
+  After the table comes an archive directory: header (u16 0x1000, 1, 0xF, 0), then 16-byte records
+  {u32 first file number, u16 file count, char name[10]} for all 675 archives (`boff_cmn` 0xD52 x76, `chrch_cmn` 0xE30 x74,
+  `hell_cmn` 0x11F8 x81, `yasik_cmn` 0x1CCC x63 ...). Its numbering is different from the size table's (not linked yet).
+- **Hard limits (proven 2026-11-08):** the game reads a mission at its original position in the archive with the size
+  from load_img.bin, and replaces a cached archive whose total size changed. So **a custom mission must be built in an
+  existing mission's slot, same size or smaller** (or grow over an unneeded next file + patch load_img.bin).
+
+## 2. What is inside a mission script (stry_dat)
+- Section 0 = rules ("when <conditions> then <actions>", run while Ryu is in their zone `0x05 zone`).
+  `0x01` = armed at start, `0x02 n` = may run n times, `0xd6 (rule, 1/3)` switches another rule on/off,
+  `0x56 0` + `0x57 t` = action group at frame t of the rule.
+- Section 2 = **load list per zone**: header (u32 zone, u32 offset) pairs up to 0xFFFF, then per zone 6-byte records
+  {u16 pool, u16 key, u16 0} ending with pool 0xFF. Pool 0 = character type, pool 2 = its extras (weapons, effects),
+  pool 1 = items/objects. Characters must be loaded in the zone where they fight.
+
+## 3. Mission 00 (m_00mura, mansion, zone 33) taken apart - 40 rules
+| Rules | What they do |
+|---|---|
+| 1-2 | Ryu at the start box (26.5, 41.4, -70.1): lock control, place Ryu at (26.3, 41.5, -68.6), give control back |
+| 3 (armed at start) | setup: music/lights (0x13d/0xae/0xac), objects (0xc4), battle area (0x9b), spawn the boss Murai (type 0x15) hidden at (41.5, 41.5, -64.3), then show him |
+| 4-9 | "respawn templates" per enemy type (0x0f type + 0x18/0x19): Genin 0x0e, Jonin 0x44, Yonin 0x17, Hannya 0x5d, red ninja 0x6b |
+| 10 | first wave: Genin, Jonin, Yonin at fixed points, then switches on rules 11-13 |
+| 11-19 | more waves when **Murai's health drops below 75 % / 50 % / 25 %** (`0x0f 0 0x15` + `0x1c 1 75.0`) |
+| 20-26 | wave bookkeeping (switch rules on/off, counters) |
+| 27-29 | a chest/object (type 267) at (49.6, 41.7, -64.0) with an item |
+| 30 | **win condition:** Murai dead (`0x0f 0 0x15` + `0x1a 1 0`) -> slow-motion / "clear" (0x133), then rule 31 |
+| 31-36 | end of mission: results screen, return to menu |
+| 37-39 | standard helper rules every script has |
+Load list: zone 33 loads Murai 0x15 (+4 extras), Genin 0x0e, Jonin 0x44 (+1), Yonin 0x17 (+4), Hannya 0x5d (+2),
+red ninja 0x6b (+1).
+
+## 4. Making our own mission (plan)
+Edit an existing mission in place (same size): e.g. m_00mura -
+1. **Enemies:** change the types in the wave rules (10-19) and the boss in rules 3/30, and swap the keys in zone 33's
+   load list (same number of records keeps the size). Use enemy_swap_data.csv for each type's extras; watch memory
+   (one boss + a few small enemy types is safe; Murai was replaced by bosses before).
+2. **Waves / difficulty:** change positions (`0x66 x y z`), health thresholds (75/50/25), counts.
+3. **Win condition:** rule 30 waits for the boss type to die - point it at the new boss.
+Tools to build: a small "mission editor" that reads a mission, lists its waves / boss / load list, and writes the edits
+back in place (reusing sigma2ngb_sty.py's block reader and afs_replace.py).
