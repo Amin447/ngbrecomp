@@ -474,3 +474,8 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
 - r_tlna04 test 1: the user opened m_70tlna (unchanged; regular SWAT + Genin) and it hung while loading. Like m_59prmd,
   an unchanged big mission hangs once mods.txt adds a boss (Nicchae) to its area: **extra load_chars in big story-stage
   missions run out of memory**. Nicchae line for tln_a commented out; test m_54tlna (Super SWAT + dinosaurs) without it.
+- r_tlna04 test 2: the user opened m_70tlna, then m_39tlna (menu names do not show which file is which). So r_tlna04 is
+  now in **all 8 Tairon city missions** (`levels/install_r_tlna04_all.py`); new converter option `--type-map 0x2e:X`
+  swaps Rachel's Super SWAT wave for an enemy the mission already loads in zone 77 (no extra loading = no memory hang):
+  m_39/m_54 Super SWAT, m_27/m_53/m_70 Genin (0xe), m_33/m_43 soldiers (0xd), m_78 Enemy Ryu (0x67). All same size,
+  in place. Undo: Cache\tln_a_cmn.afs.bak.

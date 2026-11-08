@@ -128,6 +128,7 @@ def main():
     ap.add_argument("--keep-container-blocks", action="store_true")
     ap.add_argument("--drop-container-spawns", action="store_true",
                     help="keep the container's rules except those that spawn enemies (0x5b 0,TYPE!=0)")
+    ap.add_argument("--type-map", default="", help="enemy types to swap in the converted rules, e.g. 0x2e:0xe")
     ap.add_argument("--entrance", default="", help="op 0x79 ids Sigma-only (>2025) -> NGB id per type, e.g. 0x59:2023,0x54:2025")
     ap.add_argument("--replace-zone-rules", action="store_true",
                     help="also give the container's zone-keyed rules (story stage logic) to the converted rules")
@@ -226,6 +227,7 @@ def main():
             new_blocks.append([OP | 0x02, 1, OP | 0x06, OP | 0x56, 0, OP | 0x57, 0, OP | 0x142])
             dummy_idx = len(new_blocks) - 1
         ent = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.entrance.split(",") if z)
+        tmap = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.type_map.split(",") if z)
         for W in new_blocks:
             cur = None
             for j in range(len(W) - 3):
@@ -233,6 +235,10 @@ def main():
                     continue
                 if W[j + 1] == 0 and W[j + 2] == 113 and not is_op(W[j + 2]):   # any (0, Rachel, ...) char ref
                     W[j + 2] = a.player
+                if W[j + 1] == 0 and W[j + 2] in tmap:                         # --type-map (0, TYPE, ...)
+                    W[j + 2] = tmap[W[j + 2]]
+                if W[j] in (OP | 0x119, OP | 0x11B) and W[j + 1] in tmap:       # (TYPE, ...) ops
+                    W[j + 1] = tmap[W[j + 1]]
                 if W[j] == OP | 0x5B and W[j + 1] == 0:
                     cur = W[j + 2]
                 if W[j] == OP | 0x79 and W[j + 1] > MAX_ENTRANCE and W[j + 1] < 2100 and cur in ent:
