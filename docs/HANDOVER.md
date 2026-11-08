@@ -311,3 +311,4 @@ Titan test 2026-11-08: load_chars=0x56,2:0x149,2:0x131,2:0x10B loads all 9 titan
 RESULT 2026-11-08: Genin->titan (plain spawns) + Jonin->Yonin with load_chars=0x56,2:0x149,2:0x131,2:0x10B,0x17,2:0x2B,2:0x2C,2:0x2D,2:0x2E (load_chars_area=yasik): **titans and Yonin both fight in story chapter 1**. Rule: load the type plus the pool-2 extras that follow it in its own stage load list; swap spawns with ngb_sty_swap.py (ops 0x5b,0x0f). Big enemies (titan) do not handle the Jonin path/ambush entrance; use plain spawns (Genin) for them.
 
 Swap data for all enemies: docs/enemy_swap_data.csv + docs/enemy_swap.md (tools/ngb_swap_table.py), 2026-11-08.
+Test 2026-11-08: Jonin->cat (0x55) cats only walk (path/ambush spawns again); Genin->Murai (0x15,2:0x82) Murai fight but the game hangs on entering another area (likely character memory: boss model loaded in every yasik area). Rule: ambush (Jonin) spots only for ninja-type enemies; bosses in many areas may not fit.
