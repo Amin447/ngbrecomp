@@ -139,3 +139,11 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   own list + Doku's spirit set = too much memory). New converter option `--load-only <types>`: removes every other
   character (and its pool-2 extras) from the container's load list. Test 4: `--load-only 0x2f` (list emptied;
   mods.txt adds Doku's spirit and companions).
+- **r_jigoku test 4: still crashes - parked.** Load list trimming works (only Doku's spirit 0x2F + companions 0x32,
+  0x33 load from our lists), but: Super Alma (`s_aru`) still loads through another path (LOADCHR from 0x002EDF18,
+  not the stage load list), and Doku's spirit pulls files from its home area boff (e.g. `bf_door3.sob` from
+  boff_cmn.afs) right before the crash. In NGB, Doku's spirit seems tied to its final-stage arena (boff); Sigma
+  rebuilt that fight for the pyramid. Object ids 151/192 are the same in both games (not the cause).
+  Options: test it in a boff mission instead (Doku's spirit's home), or move on to the Tairon chapters.
+  Current state: pyrmd changes still installed (restore game\pyrmd_cmn.afs.orig, game\load_img.bin.orig,
+  Cache\pyrmd_cmn.afs.bak to undo).
