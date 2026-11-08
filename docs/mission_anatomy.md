@@ -45,3 +45,14 @@ Edit an existing mission in place (same size): e.g. m_00mura -
 3. **Win condition:** rule 30 waits for the boss type to die - point it at the new boss.
 Tools to build: a small "mission editor" that reads a mission, lists its waves / boss / load list, and writes the edits
 back in place (reusing sigma2ngb_sty.py's block reader and afs_replace.py).
+
+## Mission editor + first custom mission (2026-11-08)
+- `levels/ngb_mission_edit.py show|edit` (copies in G:\NinjaGaidenBlack and repo tools/): `show` lists spawning rules,
+  boss health checks and per-zone loads; `edit --swap OLD:NEW` changes every reference (spawns, checks, health bars) and
+  rewrites the load list with NEW's extras from enemy_swap_data.csv (drops OLD if NEW is already loaded);
+  `--hp 75:90,...` changes wave thresholds. Output is always the same size (refuses if the list no longer fits).
+- **Doku needs 6 extras** (`0x2c,2:0x5c,2:0xb6,2:0x106,2:0x3,2:0x10b,2:0x57`) - the earlier church line had only 2.
+- **Custom mission 1 "Doku in the mansion"** in Mission 00's slot (m_00mura): `--swap 0x15:0x2c --swap 0x5d:0x6b`
+  (Doku replaces Murai; Hannya waves -> red ninjas to make room in the load list). Installed in
+  Cache\yasik_cmn.afs (copy before: yasik_cmn.afs.before_mission; the chapter 1 cat swap there is unchanged);
+  mods.txt cat lines turned off for the test.

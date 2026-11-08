@@ -490,3 +490,14 @@ All game-file changes undone (cache archives, game\load_img.bin, game\pyrmd_cmn.
 
 ## Missions: how they work (2026-11-08)
 See docs/mission_anatomy.md: mission N = global file 0xB76+N (load_img.bin cat 17), script in <area>_cmn.afs decides the area, per-zone load lists, Mission 00 rules taken apart, plan for a custom mission (edit in place).
+
+## Mission editor + first custom mission (2026-11-08)
+- `levels/ngb_mission_edit.py show|edit` (copies in G:\NinjaGaidenBlack and repo tools/): `show` lists spawning rules,
+  boss health checks and per-zone loads; `edit --swap OLD:NEW` changes every reference (spawns, checks, health bars) and
+  rewrites the load list with NEW's extras from enemy_swap_data.csv (drops OLD if NEW is already loaded);
+  `--hp 75:90,...` changes wave thresholds. Output is always the same size (refuses if the list no longer fits).
+- **Doku needs 6 extras** (`0x2c,2:0x5c,2:0xb6,2:0x106,2:0x3,2:0x10b,2:0x57`) - the earlier church line had only 2.
+- **Custom mission 1 "Doku in the mansion"** in Mission 00's slot (m_00mura): `--swap 0x15:0x2c --swap 0x5d:0x6b`
+  (Doku replaces Murai; Hannya waves -> red ninjas to make room in the load list). Installed in
+  Cache\yasik_cmn.afs (copy before: yasik_cmn.afs.before_mission; the chapter 1 cat swap there is unchanged);
+  mods.txt cat lines turned off for the test.
