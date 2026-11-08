@@ -24,6 +24,9 @@
  *                      as kind 1 (the shield soldier) instead (up to 8 lines)
  *   char_pool_extra=0x200000  move this many bytes from the big general memory pool into
  *                      character pool 0 (0xDB9A04, normally 0x226000) at startup
+ *   load_chars=0x17,0x6B  every area also loads these characters (type numbers), as if they were in
+ *                      its stage script load list (tools/patch_load_chars.py); load_chars_area=yasik limits
+ *                      it to areas whose file starts with that text
  *   load_files=0xABC,... every area's file list (0xDB5804) also gets these global file numbers
  *   drop_files=0x8A,0x8B also remove these files from that list (frees memory; only when nothing
  *                      of that kind spawns any more, e.g. all Genin swapped)
@@ -60,6 +63,7 @@ static uint16_t s_load_enemy[32];
 static int s_nload;
 static int s_load_when = -1;
 static uint32_t s_char_pool_extra;   /* char_pool_extra */
+static uint16_t s_lchars[16]; static int s_nlchars; static char s_lchars_area[16];   /* load_chars */
 static uint16_t s_drop[16];
 static int s_ndrop;   /* drop_files: file numbers removed after load_files is added */   /* load_files_when: only lists holding this file number */
 static uint16_t s_vswap_type[8], s_vswap_from[8], s_vswap_to[8];
@@ -79,6 +83,17 @@ static void set_option(const char *key, const char *val)
         }
     }
     else if (!strcmp(key, "char_pool_extra")) s_char_pool_extra = (uint32_t)strtoul(val, NULL, 0) & ~0xFFFu;
+    else if (!strcmp(key, "load_chars")) {
+        const char *p = val;
+        while (*p && s_nlchars < 16) {
+            char *e; long v = strtol(p, &e, 0);
+            if (e == p) break;
+            s_lchars[s_nlchars++] = (uint16_t)v;
+            p = e; while (*p == ',' || *p == ' ') p++;
+        }
+    }
+    else if (!strcmp(key, "load_chars_area")) { strncpy(s_lchars_area, val, 15); s_lchars_area[15] = 0;
+        for (char *c = s_lchars_area; *c; c++) if (*c == 13 || *c == 10 || *c == ' ') *c = 0; }
     else if (!strcmp(key, "drop_files")) {
         const char *p = val;
         while (*p && s_ndrop < 16) {
@@ -677,3 +692,13 @@ void mymod_load_trace(uint32_t fn, uint32_t sp, uint32_t r_eax, uint32_t r_ecx, 
         fprintf(f, "ADD from %08X list %08X file %04X%c", MEM32(sp), r_ecx, r_esi & 0xFFFF, 10);
     fflush(f);
 }
+
+/* load_chars (tools/patch_load_chars.py): extra characters for sub_002EE0D0's area load list */
+const char *tn_area_file(void);
+uint32_t mymod_load_chars_n(void)
+{
+    load_options();
+    if (s_lchars_area[0] && strncmp(tn_area_file(), s_lchars_area, strlen(s_lchars_area))) return 0;
+    return (uint32_t)s_nlchars;
+}
+uint32_t mymod_load_chars_key(uint32_t i) { return i < 16 ? s_lchars[i] : 0; }

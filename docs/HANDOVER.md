@@ -293,3 +293,16 @@ The start of the log also shows a one-time read of every stage archive header (m
 Missions = m_NN*.sty stage scripts in *_cmn.afs (82 found). Table: docs/missions.md (tools/ngb_missions.py). g_*.grp are geometry, not load lists. Open: where a mission chooses its chr loads.
 Mission/area character loading (2026-11-07, in progress): on every room change sub_002E2340 (sets room 0xDB9AC2, [0xD52CE0] = stage script) calls sub_002ED290(ctx=[0xDB9350]); it reads a record stream at script section 0 + ctx+0x20 and fills character load keys 0xD52D00 (u16 value, u8 pool, u8 extra) and 0xD69F80 (6-byte), then sub_002ED940 turns keys into files via the stage-data (key, file) table and queues them. Cutscene (rtm) loads use a separate table in the XBE: sub_001DBAE0(n) reads list n at 0x430158 (6-byte records: kind 0 file / 1 character (type, variant) / 2 item / 6,7 file numbers / 8 end). Script command 0x22 = boxes, not loads. ShowAction build logs recordings/load_keys.txt.
 Test 2026-11-07: load_keys.txt stayed empty in every room (0xD52D00 / 0xD69F80 layout or timing wrong; ctx+0x20 read 0). area_chars in Mission 00 (room 128, yasik_03): ryu genin jonin yonin bat crow, loaded one by one after the area file. Next: log calls of sub_00173880 (list, pool, key, extra) directly instead of guessing the key tables.
+
+### How an area chooses which characters load (solved 2026-11-08)
+load_trace.txt (tools/patch_load_trace.py) showed it: sub_002EE0D0 reads the stage script's load
+list (stry_dat header +0x18 -> offset table, entry +8 = section 2) and calls sub_00173880(list
+0xDB5400, pool, key) per record (6 bytes: u8 pool, u16 key at +2, u8 extra at +4; a difficulty bit
+from 0xD532F2 is tested). key = character/item id (Sigma char_ids numbering), pool 0 = characters,
+1/2 = items/objects. sub_002ED940 then turns keys into files through the stage data table.
+Chapter 1 story (s_yask00) loads 0/E 0/44 0/1C 0/3A (+rat 4); Mission 00 (m_00mura, same area)
+adds 0/6B red ninja and 0/17 Yonin (+ 5D Hannya), which is why the mission can spawn them.
+Cutscenes use a separate list in the XBE (sub_001DBAE0, table 0x430158).
+New option load_chars=0x17,... (+ load_chars_area=yasik): sub_002EE0D0 also requests these
+(tools/patch_load_chars.py). Test pending: load_chars=0x17 + script swap Genin->Yonin.
+tools/ngb_loadlist.py is a first decoder of section 2 (record layout still partly off).
