@@ -2,13 +2,16 @@
 
   python -I ngb_mission_edit.py show <mission.sty>
   python -I ngb_mission_edit.py edit <mission.sty> -o <out.sty> [--swap OLD:NEW ...] [--hp 75:90,50:60,25:30]
-                                     [--hp-of 0x15] [--extras auto]
+                                     [--repeat RULE:N] [--alive RULE:N] [--move RULE:x,y,z;x,y,z]
 
 show : rules that spawn enemies (type, position), boss checks (health %, death), and the per-zone load list.
 edit : --swap OLD:NEW   every enemy reference of type OLD becomes NEW (spawns, checks, health bars) and the load
                          list record of OLD (with its extras) is replaced by NEW with NEW's extras from
                          enemy_swap_data.csv. Several --swap allowed.
        --hp A:B,...     boss health thresholds (op 0x1c 1 A.0) A% -> B% (wave triggers).
+       --repeat RULE:N  rule runs up to N times (0x02 n; 255 = forever)  - how many enemies a wave rule makes
+       --alive RULE:N   spawn only while fewer than N enemies are alive (0x14 mode N)
+       --move RULE:...  fixed spawn positions (0x66 x y z) of that rule, in order
 The output must not be bigger than the input (the game reads missions at a fixed size); the tool refuses otherwise.
 Install with afs_replace.py <Cache>/<area>_cmn.afs <m_NN...sty> <out.sty>.
 """
@@ -85,29 +88,43 @@ class Mission:
         self.d[self.s2:] = sec
 
 
+def rule_info(W):
+    """repeat count, alive limits, spawns (type, where) and boss checks of one rule (word list)."""
+    rep = next((W[j + 1] for j in range(len(W) - 1) if W[j] == OP | 0x02), None)
+    alive = [(W[j + 1], W[j + 2]) for j in range(len(W) - 2) if W[j] == OP | 0x14]
+    spawns, checks = [], []
+    for j in range(len(W) - 3):
+        if W[j] == OP | 0x5B and W[j + 1] == 0 and W[j + 2]:
+            where = "?"
+            for k in range(j + 4, min(j + 14, len(W) - 3)):
+                if W[k] == OP | 0x66:
+                    where = "(%.1f, %.1f, %.1f)" % tuple(f32(W[k + 1 + i]) for i in range(3)); break
+                if W[k] == OP | 0x6B:
+                    where = f"one of {W[k+3]} points" + (" (random)" if W[k + 1] == 2 else f" (mode {W[k+1]})"); break
+                if W[k] == OP | 0x5B or W[k] == OP | 0x56:
+                    break
+            spawns.append(f"{W[j+2]:#x} at {where}")
+        if W[j] == OP | 0x0F and W[j + 1] == 0 and W[j + 2]:
+            if OP | 0x1C in W[j + 3:j + 6]:
+                i = W.index(OP | 0x1C, j + 3); checks.append(f"when {W[j+2]:#x} health < {f32(W[i+2]):.0f}%")
+            elif OP | 0x1A in W[j + 3:j + 6]:
+                checks.append(f"{W[j+2]:#x} dead/alive check")
+    return rep, alive, spawns, checks
+
+
 def show(m):
     print(f"{len(m.rules)} rules, file {len(m.d)} bytes")
     for k, at in enumerate(m.rules):
         W = [w for _, w in m.words(at)]
-        zones = [W[j + 1] for j in range(len(W) - 1) if W[j] == OP | 5]
-        spawns, checks = [], []
-        for j in range(len(W) - 4):
-            if W[j] == OP | 0x5B and W[j + 1] == 0 and W[j + 2]:
-                pos = ""
-                if j + 5 < len(W) and W[j + 4] == OP | 0x66:
-                    pos = " at (%.1f, %.1f, %.1f)" % tuple(f32(W[j + 5 + i]) for i in range(3))
-                spawns.append(f"{W[j+2]:#x}{pos}")
-            if W[j] == OP | 0x0F and W[j + 1] == 0 and W[j + 2] and W[j + 3] != OP | 0x18:
-                nxt = W[j + 5:j + 8] if j + 8 < len(W) else []
-                if W[j + 3] in (OP | 0x1C,) or (j + 4 < len(W) and W[j + 4] == OP | 0x1C):
-                    pass
-                if OP | 0x1C in W[j + 3:j + 6]:
-                    i = W.index(OP | 0x1C, j + 3); checks.append(f"{W[j+2]:#x} health < {f32(W[i+2]):.0f}%")
-                elif OP | 0x1A in W[j + 3:j + 6]:
-                    checks.append(f"{W[j+2]:#x} dead/alive check")
+        zones = sorted({W[j + 1] for j in range(len(W) - 1) if W[j] == OP | 5})
+        rep, alive, spawns, checks = rule_info(W)
         if spawns or checks:
-            print(f"rule {k:3d} zones {zones}: " + "; ".join(([("spawns " + ", ".join(spawns))] if spawns else [])
-                                                            + checks))
+            bits = []
+            if spawns: bits.append("spawns " + ", ".join(spawns))
+            bits += checks
+            if alive: bits.append("only while fewer than " + "/".join(str(n) for _, n in alive) + " alive")
+            if rep is not None: bits.append(f"runs up to {rep}x" if rep != 255 else "runs forever")
+            print(f"rule {k:3d} zones {zones}: " + "; ".join(bits))
     _, L = m.loads()
     names = {}
     if os.path.exists(SWAP_CSV):
@@ -125,6 +142,26 @@ def extras_of(t):
             v = r["load_chars value"]
             return [tuple(int(x, 0) for x in e.split(":")) for e in v.split(",")[1:] if e]
     raise SystemExit(f"type {t:#x} not in enemy_swap_data.csv")
+
+
+def edit_rules(m, repeat, alive, move):
+    """repeat {rule: n}, alive {rule: n}, move {rule: [(x,y,z), ...]} (one position per spawn in that rule, in order)."""
+    for k, at in enumerate(m.rules):
+        Wp = m.words(at); W = [w for _, w in Wp]
+        if k in repeat:
+            j = next((j for j in range(len(W)) if W[j] == OP | 0x02), None)
+            if j is None: raise SystemExit(f"rule {k} has no repeat count (op 0x02)")
+            struct.pack_into("<I", m.d, Wp[j + 1][0], repeat[k]); print(f"rule {k}: runs up to {repeat[k]}x")
+        if k in alive:
+            js = [j for j in range(len(W)) if W[j] == OP | 0x14]
+            if not js: raise SystemExit(f"rule {k} has no alive limit (op 0x14)")
+            for j in js: struct.pack_into("<I", m.d, Wp[j + 2][0], alive[k])
+            print(f"rule {k}: only while fewer than {alive[k]} alive")
+        if k in move:
+            spots = [j for j in range(len(W) - 3) if W[j] == OP | 0x66]
+            for (x, y, z), j in zip(move[k], spots):
+                struct.pack_into("<3f", m.d, Wp[j + 1][0], x, y, z)
+            print(f"rule {k}: {min(len(spots), len(move[k]))} position(s) moved")
 
 
 def edit(m, swaps, hp):
@@ -167,6 +204,9 @@ def main():
     ap.add_argument("cmd", choices=["show", "edit"]); ap.add_argument("sty")
     ap.add_argument("-o"); ap.add_argument("--swap", action="append", default=[])
     ap.add_argument("--hp", default="")
+    ap.add_argument("--repeat", action="append", default=[], help="RULE:N  rule runs up to N times (255 = forever)")
+    ap.add_argument("--alive", action="append", default=[], help="RULE:N  spawn only while fewer than N alive")
+    ap.add_argument("--move", action="append", default=[], help="RULE:x,y,z[;x,y,z...]  fixed spawn positions")
     a = ap.parse_args()
     m = Mission(a.sty)
     if a.cmd == "show":
@@ -175,6 +215,9 @@ def main():
     swaps = dict(tuple(int(x, 0) for x in s.split(":")) for s in a.swap)
     hp = dict(tuple(int(x) for x in s.split(":")) for s in a.hp.split(",") if s)
     edit(m, swaps, hp)
+    pairs = lambda L: {int(r.split(":")[0]): int(r.split(":")[1], 0) for r in L}
+    move = {int(r.split(":")[0]): [tuple(float(v) for v in p.split(",")) for p in r.split(":")[1].split(";")] for r in a.move}
+    edit_rules(m, pairs(a.repeat), pairs(a.alive), move)
     assert len(m.d) == size
     open(a.o, "wb").write(m.d)
     print(f"-> {a.o} ({len(m.d)} bytes, same as input)")

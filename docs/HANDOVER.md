@@ -502,3 +502,8 @@ See docs/mission_anatomy.md: mission N = global file 0xB76+N (load_img.bin cat 1
   Cache\yasik_cmn.afs (copy before: yasik_cmn.afs.before_mission; the chapter 1 cat swap there is unchanged);
   mods.txt cat lines turned off for the test.
 - **Tested 2026-11-08: WORKS - Doku fights in Mission 00** (custom mission 1).
+- **Editor extended (2026-11-08):** `show` now gives each wave rule's spawn spot (fixed `0x66 x y z` or "one of N
+  points", `0x6b mode offset n`, mode 2 = random), its repeat count (`0x02 n` = how many enemies the rule makes) and its
+  alive limit (`0x14 mode n` = only while fewer than n alive). New edits: `--repeat RULE:N`, `--alive RULE:N`,
+  `--move RULE:x,y,z;...`. In Mission 00 each wave rule makes 1 enemy, max 3 alive.
+- Custom mission 1b "Doku, harder": same as 1 plus `--hp 75:90,50:60,25:30` and rules 11-19 `--repeat 4 --alive 4`.
