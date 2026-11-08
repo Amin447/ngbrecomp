@@ -659,7 +659,7 @@ void mymod_list_tick(uint32_t L)
 }
 
 /* recordings/load_trace.txt (NGB_SPAWN_LOG): character-load calls, see tools/patch_load_trace.py */
-void mymod_load_trace(uint32_t fn, uint32_t sp, uint32_t eax, uint32_t ecx, uint32_t esi)
+void mymod_load_trace(uint32_t fn, uint32_t sp, uint32_t r_eax, uint32_t r_ecx, uint32_t r_esi)
 {
     static FILE *f; static int on = -1;
     if (on < 0) on = getenv("NGB_SPAWN_LOG") != 0;
@@ -669,11 +669,11 @@ void mymod_load_trace(uint32_t fn, uint32_t sp, uint32_t eax, uint32_t ecx, uint
     fprintf(f, "frame %u %s ", mymod_frames, tn_area_file());
     if (fn == 0x173880)
         fprintf(f, "LOADCHR from %08X list %08X pool %u key %X extra %X  a4 %X%c", MEM32(sp), MEM32(sp + 4), MEM32(sp + 8),
-                MEM32(sp + 0xC), eax & 0xFF, MEM32(sp + 0x10), 10);
+                MEM32(sp + 0xC), r_eax & 0xFF, MEM32(sp + 0x10), 10);
     else if (fn == 0x2ED940) {
         uint32_t k = MEM32(sp + 4);
         fprintf(f, "KEYS from %08X keys %X %X %X %X%c", MEM32(sp), MEM16(k), MEM16(k + 2), MEM16(k + 4), MEM16(k + 6), 10);
     } else
-        fprintf(f, "ADD from %08X list %08X file %04X%c", MEM32(sp), ecx, esi & 0xFFFF, 10);
+        fprintf(f, "ADD from %08X list %08X file %04X%c", MEM32(sp), r_ecx, r_esi & 0xFFFF, 10);
     fflush(f);
 }
