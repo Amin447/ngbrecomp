@@ -199,11 +199,52 @@ def edit(m, swaps, hp):
     print(f"{n_ref} enemy references changed; load list rewritten")
 
 
+def append_rules(m, src_path, rules, redirect):
+    """Copy rules (indices) from another mission to the end of m's rule list (file grows - only for mission_file).
+    0xd6 targets inside the copied rules that point at copied rules are renumbered; redirect {rule: (old, new_src)}
+    makes m's rule `rule` switch on the copy of src rule new_src instead of its old target."""
+    src = Mission(src_path)
+    base = len(m.rules)
+    newnum = {r: base + i for i, r in enumerate(rules)}
+    blocks = []
+    for r in rules:
+        W = [w for _, w in src.words(src.rules[r])]
+        for j in range(len(W) - 1):
+            if W[j] == OP | 0xD6 and W[j + 1] in newnum:
+                W[j + 1] = newnum[W[j + 1]]
+        blocks.append(W)
+    for k, (old, new_src) in redirect.items():
+        for p, w in m.words(m.rules[k]):
+            if w == OP | 0xD6 and struct.unpack_from("<I", m.d, p + 4)[0] == old:
+                struct.pack_into("<I", m.d, p + 4, newnum[new_src])
+                print(f"rule {k}: switch on rule {old} -> copied rule {newnum[new_src]} (src {new_src})")
+    # rebuild: section 0 + new blocks + new rule list, then the other sections
+    sec0 = bytearray(m.d[m.s0:m.s1]); sec0 += b"\0" * ((-len(sec0)) % 16)
+    offs = [a - m.s0 for a in m.rules]
+    for W in blocks:
+        offs.append(len(sec0)); sec0 += struct.pack(f"<{len(W)}I", *W); sec0 += b"\0" * ((-len(sec0)) % 16)
+    h = list(struct.unpack_from("<17I", sec0, 0)); h[6] = len(sec0)
+    sec0 += struct.pack(f"<{len(offs) + 1}I", *offs, 0); sec0 += b"\0" * ((-len(sec0)) % 16)
+    struct.pack_into("<17I", sec0, 0, *h)
+    t = struct.unpack_from("<I", m.d, 0x18)[0]
+    rest = [bytes(m.d[m.secs[k]:(m.secs[k + 1] if k + 1 < len(m.secs) else len(m.d))]) for k in range(1, len(m.secs))]
+    out = bytearray(m.d[:m.s0]) + sec0; secs = [m.s0]
+    for r in rest:
+        secs.append(len(out)); out += r; out += b"\0" * ((-len(out)) % 16)
+    struct.pack_into(f"<{len(secs)}I", out, t, *secs)
+    struct.pack_into("<I", out, 0x0C, len(out))
+    print(f"appended {len(rules)} rules from {os.path.basename(src_path)} as rules {base}-{base + len(rules) - 1}")
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["show", "edit"]); ap.add_argument("sty")
     ap.add_argument("-o"); ap.add_argument("--swap", action="append", default=[])
     ap.add_argument("--hp", default="")
+    ap.add_argument("--append-from", help="mission file to copy rules from (file grows: only with mission_file)")
+    ap.add_argument("--append-rules", default="", help="rule numbers to copy, e.g. 30-36")
+    ap.add_argument("--redirect", action="append", default=[], help="RULE:OLD:SRC  RULE switches on copied SRC instead of OLD")
     ap.add_argument("--repeat", action="append", default=[], help="RULE:N  rule runs up to N times (255 = forever)")
     ap.add_argument("--alive", action="append", default=[], help="RULE:N  spawn only while fewer than N alive")
     ap.add_argument("--move", action="append", default=[], help="RULE:x,y,z[;x,y,z...]  fixed spawn positions")
@@ -219,6 +260,13 @@ def main():
     move = {int(r.split(":")[0]): [tuple(float(v) for v in p.split(",")) for p in r.split(":")[1].split(";")] for r in a.move}
     edit_rules(m, pairs(a.repeat), pairs(a.alive), move)
     assert len(m.d) == size
+    if a.append_from:
+        rr = []
+        for part in a.append_rules.split(","):
+            x, _, y = part.partition("-"); rr += list(range(int(x), int(y or x) + 1))
+        red = {int(r.split(":")[0]): (int(r.split(":")[1]), int(r.split(":")[2])) for r in a.redirect}
+        out = append_rules(m, a.append_from, rr, red)
+        open(a.o, "wb").write(out); print(f"-> {a.o} ({len(out)} bytes, was {size}: use with mission_file)"); return
     open(a.o, "wb").write(m.d)
     print(f"-> {a.o} ({len(m.d)} bytes, same as input)")
 

@@ -71,3 +71,8 @@ back in place (reusing sigma2ngb_sty.py's block reader and afs_replace.py).
 size in memory after `load_img.bin` (entry 0xB76+N) and the archive header are read, and copy our file over the
 mission when it is read. So a custom mission can be any size. stderr shows `[MOD] mission_file: ...` lines.
 Test 1: Mission 00 = unchanged chapter 1 story script s_yask00.sty (valley -> fortress -> Murai).
+- **Test 1 result:** the whole chapter 1 played as Mission 00 (valley -> fortress -> Murai); it hung after Murai: the
+  story's rule 338 (Murai < 16.7 %) switches on rule 339 (defeat cutscene at 12.5 % + chapter end -> chapter 2).
+  Editor option `--append-from <mission> --append-rules 30-37 --redirect 338:339:30` copies Mission 00's ending
+  (30 = Murai dead -> clear, 31-36 results, 37 helper) to the end of the chapter script (rules 522-529, d6 targets
+  renumbered) and points rule 338 at it. custom/m_00_chapter1.sty (story-only copy kept as m_00_chapter1_story_only.sty).
