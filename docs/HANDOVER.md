@@ -380,3 +380,7 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
 - Test installed: Sigma `r_chrc03` (Rachel vs Doku, church zones 183/188) converted and put over `s_chrc03.sty` in
   `RecordBuild\userdata\Cache\chrch_cmn.afs` (backup chrch_cmn.afs.bak). NGB's own s_chrc03 (321 rules) also runs the
   rest of that church part, so doors/items outside Doku's arena may not work during this test. Undo: copy the .bak back.
+- **First test crashed (2026-11-08)**: a Sigma file can NOT keep its own tables. Header regions 9-13 (and 2-3) have
+  different layouts in NGB (only 4, 5, 8 = box tables match). New converter mode `--container <ngb.sty>`: take an NGB
+  file of the same area (all tables NGB-format) and put in only the converted rules (+ relocated battle data).
+  Test 2: r_chrc03 rules in NGB `m_06arum.sty` (the Alma mission, Monastery) - other church missions restored.

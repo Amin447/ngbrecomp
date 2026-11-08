@@ -96,6 +96,8 @@ def main():
     ap.add_argument("sty"); ap.add_argument("btl", nargs="?")
     ap.add_argument("-o", required=True); ap.add_argument("--player", type=lambda x: int(x, 0), default=0)
     ap.add_argument("--load-from")
+    ap.add_argument("--container", help="NGB .sty of the same area: keep all its tables, use the converted rules")
+    ap.add_argument("--keep-container-blocks", action="store_true")
     a = ap.parse_args()
     d = bytearray(open(a.sty, "rb").read())
     t, secs = sections(d)
@@ -121,6 +123,16 @@ def main():
             if tuple(W) in existing:
                 continue
             new_blocks.append(W)
+    if a.container:
+        # NGB file of the same area supplies every table; only the converted rules are put in
+        sty_blocks = [block_words(d, s0, b, 0x142) for b in L]
+        cd = bytearray(open(a.container, "rb").read())
+        ct, csecs = sections(cd)
+        ch, cL = block_list(cd, csecs[0])
+        d, t, secs, s0, s1, h = cd, ct, csecs, csecs[0], csecs[1], ch
+        L = cL if a.keep_container_blocks else []
+        new_blocks = sty_blocks + new_blocks
+        report.append(f"container {os.path.basename(a.container)}: tables kept, {len(L)} of its rules kept")
     # rebuild section 0: old bytes + new blocks + new block list
     sec0 = bytearray(d[s0:s1])
     pad = (-len(sec0)) % 16; sec0 += b"\0" * pad
