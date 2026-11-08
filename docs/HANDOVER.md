@@ -507,3 +507,4 @@ See docs/mission_anatomy.md: mission N = global file 0xB76+N (load_img.bin cat 1
   alive limit (`0x14 mode n` = only while fewer than n alive). New edits: `--repeat RULE:N`, `--alive RULE:N`,
   `--move RULE:x,y,z;...`. In Mission 00 each wave rule makes 1 enemy, max 3 alive.
 - Custom mission 1b "Doku, harder": same as 1 plus `--hp 75:90,50:60,25:30` and rules 11-19 `--repeat 4 --alive 4`.
+- Tested 2026-11-09: harder Doku mission looks right to the user (bigger, earlier waves; not measured exactly). Mission scripts have no difficulty variants: edits apply on every difficulty.
