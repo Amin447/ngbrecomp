@@ -487,3 +487,6 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
 
 ## Sigma extra chapters: REVERTED (2026-11-08)
 All game-file changes undone (cache archives, game\load_img.bin, game\pyrmd_cmn.afs, mods.txt lines). Findings and tools kept: see the summary at the top of docs/sigma_extra_chapters.md. The per-area load_chars feature in my_mods.c is kept (general).
+
+## Missions: how they work (2026-11-08)
+See docs/mission_anatomy.md: mission N = global file 0xB76+N (load_img.bin cat 17), script in <area>_cmn.afs decides the area, per-zone load lists, Mission 00 rules taken apart, plan for a custom mission (edit in place).
