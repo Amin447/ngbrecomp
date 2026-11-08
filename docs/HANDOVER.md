@@ -307,3 +307,4 @@ New option load_chars=0x17,... (+ load_chars_area=yasik): sub_002EE0D0 also requ
 (tools/patch_load_chars.py). Test pending: load_chars=0x17 + script swap Genin->Yonin.
 tools/ngb_loadlist.py is a first decoder of section 2 (record layout still partly off).
 RESULT 2026-11-08: load_chars=0x17 (load_chars_area=yasik) + script swap Genin->Yonin (ngb_sty_swap.py 0x800 0xE 0x17 0x5b,0x0f) -> **Yonin appear in story chapter 1**. Cross-chapter enemies work this way: add to the load list + swap the spawn type in the script.
+Titan test 2026-11-08: load_chars=0x56,2:0x149,2:0x131,2:0x10B loads all 9 titan files (same as titan stages; extras = pool-2 entries that follow titan in every titan stage load list). Jonin->titan: titans spawn but stand still. Jonin spawns use path/ambush follow-up ops (op6d + op76 waypoints); titan likely lacks that entrance. Next test: Genin->titan (plain spawns).
