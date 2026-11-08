@@ -326,3 +326,4 @@ Cat: script 0 "IF NOT in_area(self) -> var2 = 3" sends it to script 7 = walk bac
 spot (op 0x4E = point INSIDE an area; aiscript's name outside_area reads backwards). In chapter 1's
 Genin groups the cat is never inside a group area, so it only wanders. Test patch: cat.chr script 0
 byte (pattern 92 4d 01 0d 02 03 00, the 03) -> 01 in userdata/Cache/chr_cat.afs (backup .bak).
+Cat patch 1 (out-of-area rule) alone: still wandering. Cat attacks only when within 5 m AND (var0==5 or var2 in 4/6); its own AI never sets var0=5/15 (only var0==15 -> var2=4), so the battle group script must order it. Patch 2: script 0 "var== 0, 15" (NGB bytes 59 00 0f 00 0d 02 04 00) -> "var== 0, 2" so the default state allows attacks. Testing.
