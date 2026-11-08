@@ -128,6 +128,7 @@ def main():
     ap.add_argument("--drop-container-spawns", action="store_true",
                     help="keep the container's rules except those that spawn enemies (0x5b 0,TYPE!=0)")
     ap.add_argument("--entrance", default="", help="op 0x79 ids Sigma-only (>2025) -> NGB id per type, e.g. 0x59:2023,0x54:2025")
+    ap.add_argument("--load-only", default="", help="keep only these characters (and their extras) in the load list, e.g. 0x2f")
     ap.add_argument("--zone-map", default="", help="zone keys, e.g. 183:187,188:187")
     a = ap.parse_args()
     d = bytearray(open(a.sty, "rb").read())
@@ -280,6 +281,23 @@ def main():
     if a.load_from:
         nd = open(a.load_from, "rb").read(); nt, ns = sections(nd)
         rest[1] = nd[ns[2]:(ns[3] if len(ns) > 3 else len(nd))]
+    if a.load_only:
+        # load list (section 2): 0x16-byte header, then 6-byte records {u16 pool, u16 key, u16 0} up to pool 0xFF;
+        # pool-2 records belong to the pool-0 record before them
+        keep = {int(x, 0) for x in a.load_only.split(",")}
+        L2 = bytearray(rest[1]); recs, q = [], 0x16
+        while q + 6 <= len(L2) and struct.unpack_from("<H", L2, q)[0] != 0xFF:
+            recs.append(struct.unpack_from("<3H", L2, q)); q += 6
+        tail = bytes(L2[q:])
+        kept, drop = [], False
+        for r in recs:
+            if r[0] == 0:
+                drop = r[1] not in keep
+            if not (drop and r[0] in (0, 2)):
+                kept.append(r)
+        body = b"".join(struct.pack("<3H", *r) for r in kept) + tail
+        rest[1] = bytes(L2[:0x16]) + body + b"\0" * (len(L2) - 0x16 - len(body))
+        report.append(f"load list: {len(recs)} -> {len(kept)} records (kept chars {sorted(hex(k) for k in keep)})")
     out = bytearray(d[:s0]) + sec0
     new_secs = [s0]
     for r in rest:
