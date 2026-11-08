@@ -7,7 +7,7 @@
 import os, pathlib, re
 NL = chr(10)
 gen = pathlib.Path(os.path.expanduser("~/ngbrecomp")) / "src/recomp/gen"
-DECL = "void mymod_load_trace(uint32_t fn, uint32_t sp, uint32_t eax, uint32_t ecx, uint32_t esi);   /* src/my_mods.c */" + NL
+DECL = "void mymod_load_trace(uint32_t fn, uint32_t sp, uint32_t r_eax, uint32_t r_ecx, uint32_t r_esi);   /* src/my_mods.c */" + NL
 for fn in ("sub_00173880", "sub_002ED940", "sub_00171F30"):
     for g in sorted(gen.glob("recomp_*.c")):
         s = g.read_text()
