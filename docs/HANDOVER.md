@@ -355,3 +355,19 @@ chapters of both games on their arguments (~44k instructions).
 - NGB has no .btl files; Sigma battles (.btl, ops 0x06-0x0a) must be merged into the .sty.
 - Rachel chapters by Sigma-only ops: r_tlna01 0 (fully convertible), r_chrc03 1, r_jigoku 2, r_hell 3, r_isle01 27, others 100-450.
 Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl) and try it in tln_a as Ryu.
+
+## Converting a Sigma chapter script to NGB (findings 2026-11-08)
+- **File layout:** section 0 starts with a 17-field header; each field means the same in both games (only the order of the
+  regions in the file differs), so a Sigma file can keep its layout. Field 6 = list of rule blocks.
+  NGB sets fields 15/16 to 0xFFFFFFFF / 0x86000002 (Sigma 0 / 0).
+- **Rules:** each block = "when <conditions> then <actions>": `2 n` (repeat), `5 key` (zone), `6` conditions, `56` actions, `142` end (NGB numbers).
+- **Battles (.btl -> .sty):** a Sigma battle block = `0x0A mask` (difficulty variant: one block per enemy type, e.g. Genin/Jonin/Hannya)
+  + `S6 ... S7` pre-section + `S8` + a normal "6 conditions 56 actions" rule + `S9`. NGB has the same rule inline in the
+  .sty, without mask/markers (difficulty comes from the _l/_l2/_l4 files). Convert = keep the Normal variant, drop
+  mask, pre-section and markers, append the block to the .sty block list. Proven by matching s_yask00.btl to NGB s_yask00.sty.
+- **Flags:** renumbered per chapter (no global shift; `flag_map_sigma_ngb.csv` has 693 seen pairs, half uncertain).
+  A converted chapter can keep its own flags; only shared/special flags (e.g. NGB 896) need mapping.
+- **Sigma-only multi-value ops:** 0x61->0x2c, 0x160->0x83, 0x161->0x11f, 0x154->0xd6 (keep one value), 0x157 -> 0xd6 (flag op).
+- **Rachel chapters:** player Rachel = type 113 (I_REI); as Ryu it must become Ryu's type. Text ids are Sigma's (may be missing in NGB).
+  r_tlna01 = hint popups only (no fights). Smallest fight chapter: **r_chrc03** (7+4 blocks, 1 Sigma-only op, enemy type 0x2C);
+  then r_jigoku (43+4), r_hell (29+7: Nicchae + Ishtaros).
