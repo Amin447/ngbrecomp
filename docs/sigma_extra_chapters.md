@@ -75,3 +75,10 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   New options: `--drop-container-spawns` (keep the mission's rules, drop only its enemy spawns), `--zone-map 183:187,188:187`;
   converted rules' flags are moved above the container's highest flag; the rule list is rewritten in place when it fits.
   Test 3 command: `sigma2ngb_sty.py r_chrc03.sty r_chrc03.btl -o out --container m_06arum.sty --drop-container-spawns --zone-map 183:187,188:187`.
+- **Test 3 result: no Doku.** Logs: Doku was loaded, Ryu was in zone 187 (object +0x2786 = current zone in NGB).
+  Cause: **op 0xd6 (n, s) is not a flag op: it switches rule n of the block list on (s=1) / off (s=3)** (a rule
+  disables itself with `0xd6 <own index> 3`). Earlier "spawn kind = flag id" finding: the kind byte is read by the same
+  op, so treat it as a rule/slot number. Sigma `0x153 n` = start battle rule n (from the .btl list).
+  Converter now: renumbers 0xd6 targets to the rules' new positions, turns 0x153 n into `0xd6 <battle rule> 1`,
+  keeps the container's emptied spawn rules in their slots (pointing at an empty rule) so its own numbering stays valid.
+  `afs_replace.py` appends a file at the end of the archive when it no longer fits its slot.
