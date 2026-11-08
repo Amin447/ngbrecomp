@@ -123,3 +123,8 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   `m_59prmd` (their arenas match Rachel's coordinates). They borrow the slots of `s_jigoku_l2.sty` / `s_jigoku_l4.sty`,
   so **the story pyramid on Hard / Master Ninja is broken until pyrmd_cmn.afs.bak is restored**.
   Doku's spirit needs companions (from m_17s_dk's load list): `load_chars=0x2f,2:0xb8,2:0x3,0x32,2:0x89,0x33,1:0xb8`.
+- **r_jigoku test 1: black screen.** all_loads.txt: the game read m_16s_ar at its ORIGINAL offset (0x819800) with
+  the NEW length - file positions come from the archive in the installed game folder
+  (`%LOCALAPPDATA%\NinjaGaidenBlack\game`), data/sizes from the cache copy. So `--borrow` (a moved file) needs the
+  installed copy to have the same header: the edited archive was copied there too, original kept as
+  `pyrmd_cmn.afs.orig` (restore both: game\pyrmd_cmn.afs.orig -> pyrmd_cmn.afs, Cache\pyrmd_cmn.afs.bak -> pyrmd_cmn.afs).
