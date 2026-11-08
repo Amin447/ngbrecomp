@@ -484,3 +484,6 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   locked, and control is only given back by the battle rule in zone 77. New option `--no-start-lock` drops 0x10c and
   0x76 from start-up rules; all 8 Tairon missions rebuilt with it. The battle starts when Ryu walks into zone 77
   (Rachel's battle area around x 45..75, z -65..-90).
+
+## Sigma extra chapters: REVERTED (2026-11-08)
+All game-file changes undone (cache archives, game\load_img.bin, game\pyrmd_cmn.afs, mods.txt lines). Findings and tools kept: see the summary at the top of docs/sigma_extra_chapters.md. The per-area load_chars feature in my_mods.c is kept (general).

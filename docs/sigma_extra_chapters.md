@@ -1,3 +1,53 @@
+# Sigma extra chapters in NGB - SUMMARY (status 2026-11-08: all game changes REVERTED, findings kept)
+
+All game-file changes for this work were undone on 2026-11-08 (cached archives and installed game files are the
+originals again, mods.txt chapter lines removed). The tools and everything learned are kept here; the detailed
+test log follows below this summary.
+
+## What worked
+| Sigma chapter | Put into NGB mission | Result |
+|---|---|---|
+| r_chrc03 (Rachel vs Doku, church) | m_06arum (Alma mission, Monastery), zones 183/188 -> 187 | Doku fights |
+| r_hell (Nicchae + Ishtaros, hell zone 213) | m_72arub (Nicchae mission) + load Ishtaros `0x54,2:0x132,2:0x13d,2:0x13e,0x5b` | both fight |
+| r_jigoku (Doku's spirit, pyramid) | m_16s_ar | crash: Doku's spirit seems tied to its home area boff; parked |
+| r_tlna04 (Super SWAT, Tairon) | all 8 Tairon missions | runs, but no enemies: Ryu cannot reach zone 77 (doors) |
+
+## Tools (G:\NinjaGaidenSigma\levels, copies in G:\NinjaGaidenBlack and repo tools/)
+- `sty_opmap.py` - Sigma <-> NGB stage-script op numbers.
+- `sigma2ngb_sty.py` - converter. Recipe that worked:
+  `sigma2ngb_sty.py <r_x.sty> <r_x.btl> -o out.sty --container <NGB mission of the same area> --drop-container-spawns
+  [--zone-map S:N] [--entrance T:id] [--type-map S:N] [--drop-battles n] [--replace-zone-rules] [--no-start-lock] [--load-only T]`
+- `afs_replace.py <afs> <name> <file>` - replace a file in place (keeps archive size; `--borrow` is NOT usable for
+  mission scripts, see below).
+- `grow_mission_inplace.py`, `install_r_tlna04_all.py` - the test installers.
+- my_mods.c: `load_chars=` lines each with their own `load_chars_area=` (kept; general mod feature).
+
+## Key facts learned
+1. **Op numbers:** NGB 0x01-0x05 = Sigma; NGB 0x06-0x55 = Sigma+5; NGB 0x56-0x141 = Sigma+0x0F; NGB 0x142 = Sigma 0x16E.
+2. **Section-0 header:** 17 fields with the same meaning, but tables 2-3 and 9-13 have different layouts -> always build
+   on an NGB file of the same area ("container") and only put the converted rules in.
+3. **Rules** = "when conditions then actions" blocks; `0xd6 (n, 1/3)` switches rule n of the list on/off (it is not a
+   flag op) - renumber targets when rules move. Rules run only while Ryu is in their zone (`0x05 zone`; Ryu's
+   current zone = object +0x2786).
+4. **Battles (.btl):** per-difficulty copies (mask 0x0A, bit 1 = Normal) with markers 0x06-0x09; NGB keeps the plain
+   rule inline. Sigma `0x153 n` / `0x154 v0..v4` = start battle n (v1 = Normal); `0x157 n,s` = rule switch (1024 = none).
+   `0x9b`/`0x9c` point into the .btl's own data -> copy it along.
+5. **Ids that differ:** entrance ids `0x79` (Sigma 2026 does not exist; NGB 2001-2025), `0x9c` ids (> 257 Sigma only),
+   item ids (0x61/0x160/0x161 dropped), Sigma point ids (`0x76`), flag/rule numbering. Object ids 151/192 are the same.
+   Rachel = type 113 -> Ryu 0 in every `(0, 113, ...)` reference.
+6. **Files:** a mission script must keep its **original position and size** (game reads it via `game\load_img.bin`
+   category 17 and the original archive layout); a cached archive whose total size changes is replaced by the original.
+7. **Loading:** load lists (section 2) are per zone ((zone, offset) header, 6-byte records {pool, key, 0}); bosses can
+   need companion characters (Ishtaros's hand 0x5B, Doku's spirit 0x32/0x33); adding extra characters to big
+   story-stage missions runs out of memory and hangs loading.
+
+## Next ideas (if resumed)
+- Tairon: keep the container's door rules (rules using object 216) when using `--replace-zone-rules`.
+- r_jigoku: try inside a boff mission (Doku's spirit's home).
+- Playable-Rachel look: Rachel's model rei.kmd exists in NGB.
+
+---
+
 # Sigma's extra chapters: can they go into NGB? (investigated 2026-11-08)
 
 Method: every Sigma file name (`G:\NinjaGaidenSigma\text\file_names.csv`) compared with every NGB archive entry
