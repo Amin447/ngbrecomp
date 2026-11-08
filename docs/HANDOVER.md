@@ -333,3 +333,7 @@ RESULT 2026-11-08: **cats attack in chapter 1** (Genin->cat, kind 0xff, load_cha
 The 3rd argument of spawn op 0x5b (0x81-0x90 in chapter 1) is a **flag id**: it is set when that enemy dies, and door/event logic reads it with op 0xd6. Rewriting it (e.g. to 0xff) leaves doors locked forever. Keep the original kind; only swap the type.
 
 Also swap the type in ops **0xa5**(group id, TYPE) and **0x5c**(0, TYPE): they wait until every enemy of that type in a group is dead, then open the door. If they still name the old type, those doors never open (2026-11-08). ngb_sty_swap.py ops: 0x5b,0x0f,0xa5 (patch 0x5c by hand).
+
+## Locked doors after a swap: solved (2026-11-08, tested: door opens)
+Spawns  and their  checks are **door-entrance spawns** (enemy bursts in through a door). A non-ninja enemy (cat) cannot do that entrance, the event never ends and the door stays locked. Keep those as the original type.  now skips them by default ( to force), swaps ops 0x5b,0x0f,0xa5,0x5c by default, and no longer changes the spawn kind.
+Working chapter 1:  (cats in Genin spots, Genin still burst through doors).
