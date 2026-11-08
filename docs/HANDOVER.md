@@ -449,3 +449,7 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   load_img entry 0xB86 0x4A50 -> 0x68C0). m_59prmd is back to original (its next neighbour is the name table).
   Restore: game\load_img.bin.orig, game\pyrmd_cmn.afs.orig, Cache\pyrmd_cmn.afs.bak.
   (r_hell / r_chrc03 worked because their files kept the original position and size.)
+- **r_jigoku test 3 (m_16s_ar): crash while loading characters** (Super Alma, Arioch, shadows, cats from the mission's
+  own list + Doku's spirit set = too much memory). New converter option `--load-only <types>`: removes every other
+  character (and its pool-2 extras) from the container's load list. Test 4: `--load-only 0x2f` (list emptied;
+  mods.txt adds Doku's spirit and companions).
