@@ -98,6 +98,9 @@ def main():
     ap.add_argument("--load-from")
     ap.add_argument("--container", help="NGB .sty of the same area: keep all its tables, use the converted rules")
     ap.add_argument("--keep-container-blocks", action="store_true")
+    ap.add_argument("--drop-container-spawns", action="store_true",
+                    help="keep the container's rules except those that spawn enemies (0x5b 0,TYPE!=0)")
+    ap.add_argument("--zone-map", default="", help="zone keys, e.g. 183:187,188:187")
     a = ap.parse_args()
     d = bytearray(open(a.sty, "rb").read())
     t, secs = sections(d)
@@ -130,8 +133,26 @@ def main():
         ct, csecs = sections(cd)
         ch, cL = block_list(cd, csecs[0])
         d, t, secs, s0, s1, h = cd, ct, csecs, csecs[0], csecs[1], ch
-        L = cL if a.keep_container_blocks else []
+        L = cL if (a.keep_container_blocks or a.drop_container_spawns) else []
+        if a.drop_container_spawns:
+            def spawns(b):
+                W = block_words(cd, s0, b, 0x142)
+                return any(W[j] == OP | 0x5B and W[j + 1] == 0 and W[j + 2] != 0 for j in range(len(W) - 2))
+            L = [b for b in L if not spawns(b)]
         new_blocks = sty_blocks + new_blocks
+        # move the converted rules' flags (op 0xd6 first arg) above every flag the container uses
+        cw = struct.unpack_from(f"<{(csecs[1] - csecs[0]) // 4}I", cd, csecs[0])
+        top = max(cw[j + 1] for j in range(len(cw) - 2) if cw[j] == OP | 0xD6 and cw[j + 1] < 0x10000) + 1
+        for W in new_blocks:
+            for j in range(len(W) - 1):
+                if W[j] == OP | 0xD6 and W[j + 1] < 0x10000:
+                    W[j + 1] += top
+        report.append(f"flags moved up by {top}")
+        zm = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.zone_map.split(",") if z)
+        for W in new_blocks:
+            for j in range(len(W) - 1):
+                if W[j] == OP | 0x05 and W[j + 1] in zm:
+                    W[j + 1] = zm[W[j + 1]]
         report.append(f"container {os.path.basename(a.container)}: tables kept, {len(L)} of its rules kept")
     # rebuild section 0: old bytes + new blocks + new block list
     sec0 = bytearray(d[s0:s1])
@@ -148,8 +169,12 @@ def main():
                 report.append("op 0x9b data relocated")
         offs.append(len(sec0)); sec0 += struct.pack(f"<{len(W)}I", *W)
         sec0 += b"\0" * ((-len(sec0)) % 16)
-    h[6] = len(sec0)
-    sec0 += struct.pack(f"<{len(offs) + 1}I", *offs, 0); sec0 += b"\0" * ((-len(sec0)) % 16)
+    old_n = len(block_list(d, s0)[1])
+    if len(offs) <= old_n:                 # reuse the old list's space (keeps the file small)
+        struct.pack_into(f"<{old_n + 1}I", sec0, h[6], *offs, *([0] * (old_n + 1 - len(offs))))
+    else:
+        h[6] = len(sec0)
+        sec0 += struct.pack(f"<{len(offs) + 1}I", *offs, 0); sec0 += b"\0" * ((-len(sec0)) % 16)
     h[15], h[16] = 0xFFFFFFFF, 0x86000002
     struct.pack_into("<17I", sec0, 0, *h)
     rest = [bytes(d[secs[k]:(secs[k + 1] if k + 1 < len(secs) else len(d))]) for k in range(1, len(secs))]
