@@ -76,3 +76,4 @@ Test 1: Mission 00 = unchanged chapter 1 story script s_yask00.sty (valley -> fo
   Editor option `--append-from <mission> --append-rules 30-37 --redirect 338:339:30` copies Mission 00's ending
   (30 = Murai dead -> clear, 31-36 results, 37 helper) to the end of the chapter script (rules 522-529, d6 targets
   renumbered) and points rule 338 at it. custom/m_00_chapter1.sty (story-only copy kept as m_00_chapter1_story_only.sty).
+- **Reverted 2026-11-09 (user moved on):** mission_file line removed from mods.txt, chapter 1 cat lines back on, custom mission files parked in RecordBuild\custom_off, mansion archive = state before the mission work. Code (editor, loader, after-read hook) kept, inactive.
