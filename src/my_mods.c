@@ -24,7 +24,7 @@
  *                      as kind 1 (the shield soldier) instead (up to 8 lines)
  *   char_pool_extra=0x200000  move this many bytes from the big general memory pool into
  *                      character pool 0 (0xDB9A04, normally 0x226000) at startup
- *   load_chars=0x17,0x6B  every area also loads these characters (type numbers), as if they were in
+ *   load_chars=0x56,2:0x149  every area also loads these (type numbers; pool:key for pool 1/2 extras), as if in
  *                      its stage script load list (tools/patch_load_chars.py); load_chars_area=yasik limits
  *                      it to areas whose file starts with that text
  *   load_files=0xABC,... every area's file list (0xDB5804) also gets these global file numbers
@@ -63,7 +63,7 @@ static uint16_t s_load_enemy[32];
 static int s_nload;
 static int s_load_when = -1;
 static uint32_t s_char_pool_extra;   /* char_pool_extra */
-static uint16_t s_lchars[16]; static int s_nlchars; static char s_lchars_area[16];   /* load_chars */
+static uint16_t s_lchars[16]; static uint8_t s_lpool[16]; static int s_nlchars; static char s_lchars_area[16];   /* load_chars */
 static uint16_t s_drop[16];
 static int s_ndrop;   /* drop_files: file numbers removed after load_files is added */   /* load_files_when: only lists holding this file number */
 static uint16_t s_vswap_type[8], s_vswap_from[8], s_vswap_to[8];
@@ -86,8 +86,10 @@ static void set_option(const char *key, const char *val)
     else if (!strcmp(key, "load_chars")) {
         const char *p = val;
         while (*p && s_nlchars < 16) {
-            char *e; long v = strtol(p, &e, 0);
+            char *e; long v = strtol(p, &e, 0), pool = 0;
             if (e == p) break;
+            if (*e == ':') { pool = v; p = e + 1; v = strtol(p, &e, 0); if (e == p) break; }   /* pool:key */
+            s_lpool[s_nlchars] = (uint8_t)pool;
             s_lchars[s_nlchars++] = (uint16_t)v;
             p = e; while (*p == ',' || *p == ' ') p++;
         }
@@ -702,3 +704,4 @@ uint32_t mymod_load_chars_n(void)
     return (uint32_t)s_nlchars;
 }
 uint32_t mymod_load_chars_key(uint32_t i) { return i < 16 ? s_lchars[i] : 0; }
+uint32_t mymod_load_chars_pool(uint32_t i) { return i < 16 ? s_lpool[i] : 0; }
