@@ -103,3 +103,6 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   (b) entrance id `0x79 2026` - NGB only has 2001-2025 -> `--entrance 0x59:2023,0x54:2025` (NGB's own values);
   (c) `0x9c(id, ptr, n, ptr, n)` pointing into the .btl -> relocated like 0x9b; its id 307 is Sigma-only (NGB max 257,
   probably the battle music/sound - the noise) -> replaced by the container's own id (229).
+- **r_hell test 2: WORKS - Nicchae and Ishtaros both fight** (Sigma Rachel chapter r_hell in the Nicchae mission).
+  Ishtaros had no hand: mods.txt missed her 3rd extra; correct line `load_chars=0x54,2:0x132,2:0x13d,2:0x13e`
+  (always copy the whole "load_chars value" column of enemy_swap_data.csv).
