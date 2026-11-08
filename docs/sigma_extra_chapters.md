@@ -110,3 +110,4 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   script spawns it). NGB's m_74whip loads it right after her. Correct line: `load_chars=0x54,2:0x132,2:0x13d,2:0x13e,0x5b`.
   Lesson: some bosses need companion characters; check the boss's own NGB mission load list (section 2) for
   pool-0 entries right after it. (enemy_swap_data.csv's extras for 0x5B are wrong - it picked up the next records.)
+- **Confirmed 2026-11-08:** with 0x5B loaded, Ishtaros has her hand. r_hell fully works.
