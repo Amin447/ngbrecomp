@@ -411,3 +411,9 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   `0xd6 battle 1`; `0x157 n,s` = rule switch like 0xd6 (n=1024 = none, dropped); `0x16b` dropped. Battle-file rules use
   the .sty's rule numbers. r_hell (zone 213, Nicchae 0x59 + Ishtaros 0x54) put into NGB Mission `m_72arub.sty`
   (Nicchae mission, hell area, same zone 213); mods.txt loads Ishtaros in `hell` (Nicchae is already loaded there).
+- **r_hell test 1:** bosses spawned (life bars, positions next to Ryu) but stayed invisible; loud scratching noise.
+  Found: bosses are spawned hidden (`0x78 0`) and shown later (`0x78 1`); the Sigma rule also used
+  (a) `0x70(0,113,0)` = target Rachel -> now any `(0, 113, ...)` char reference becomes the player;
+  (b) entrance id `0x79 2026` - NGB only has 2001-2025 -> `--entrance 0x59:2023,0x54:2025` (NGB's own values);
+  (c) `0x9c(id, ptr, n, ptr, n)` pointing into the .btl -> relocated like 0x9b; its id 307 is Sigma-only (NGB max 257,
+  probably the battle music/sound - the noise) -> replaced by the container's own id (229).
