@@ -28,3 +28,6 @@ has one row per character type with everything needed to bring it into another s
 
 Cutscene-only types (e.g. 0x3D Ayane, 0x3B R_RYU) have no load list entry and cannot fight.
 Memory: several big enemies at once may still run out of character memory.
+
+## Do not change the spawn kind (found 2026-11-08)
+The 3rd argument of spawn op 0x5b (0x81-0x90 in chapter 1) is a **flag id**: it is set when that enemy dies, and door/event logic reads it with op 0xd6. Rewriting it (e.g. to 0xff) leaves doors locked forever. Keep the original kind; only swap the type.
