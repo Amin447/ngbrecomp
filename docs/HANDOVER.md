@@ -442,3 +442,10 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   (`%LOCALAPPDATA%\NinjaGaidenBlack\game`), data/sizes from the cache copy. So `--borrow` (a moved file) needs the
   installed copy to have the same header: the edited archive was copied there too, original kept as
   `pyrmd_cmn.afs.orig` (restore both: game\pyrmd_cmn.afs.orig -> pyrmd_cmn.afs, Cache\pyrmd_cmn.afs.bak -> pyrmd_cmn.afs).
+- **r_jigoku test 2: crash.** The game still read the mission at its ORIGINAL position with its ORIGINAL size:
+  **mission scripts (category 17) are listed in `game\load_img.bin` (size, category) and read from their original
+  place.** So a mission file can never move; it can only grow IN PLACE over the next file, with its size also patched
+  in load_img.bin. `levels/grow_mission_inplace.py` does this for m_16s_ar (grows over s_jigoku_l2.sty, patches
+  load_img entry 0xB86 0x4A50 -> 0x68C0). m_59prmd is back to original (its next neighbour is the name table).
+  Restore: game\load_img.bin.orig, game\pyrmd_cmn.afs.orig, Cache\pyrmd_cmn.afs.bak.
+  (r_hell / r_chrc03 worked because their files kept the original position and size.)
