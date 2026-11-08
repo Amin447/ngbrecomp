@@ -165,3 +165,8 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   swaps Rachel's Super SWAT wave for an enemy the mission already loads in zone 77 (no extra loading = no memory hang):
   m_39/m_54 Super SWAT, m_27/m_53/m_70 Genin (0xe), m_33/m_43 soldiers (0xd), m_78 Enemy Ryu (0x67). All same size,
   in place. Undo: Cache\tln_a_cmn.afs.bak.
+- r_tlna04 test 3: no enemies, Ryu could not move (m_70tlna, zone 75). Rachel's start-up rules (no zone key) lock control
+  (0x10c) and teleport her to Sigma point 465 (`0x76 0 465`); NGB's container has no such point, so Ryu stayed in zone 75
+  locked, and control is only given back by the battle rule in zone 77. New option `--no-start-lock` drops 0x10c and
+  0x76 from start-up rules; all 8 Tairon missions rebuilt with it. The battle starts when Ryu walks into zone 77
+  (Rachel's battle area around x 45..75, z -65..-90).

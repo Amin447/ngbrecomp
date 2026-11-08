@@ -128,6 +128,7 @@ def main():
     ap.add_argument("--keep-container-blocks", action="store_true")
     ap.add_argument("--drop-container-spawns", action="store_true",
                     help="keep the container's rules except those that spawn enemies (0x5b 0,TYPE!=0)")
+    ap.add_argument("--no-start-lock", action="store_true", help="drop control locks / teleports from start-up rules")
     ap.add_argument("--type-map", default="", help="enemy types to swap in the converted rules, e.g. 0x2e:0xe")
     ap.add_argument("--entrance", default="", help="op 0x79 ids Sigma-only (>2025) -> NGB id per type, e.g. 0x59:2023,0x54:2025")
     ap.add_argument("--replace-zone-rules", action="store_true",
@@ -226,6 +227,19 @@ def main():
         if dummy_slots:
             new_blocks.append([OP | 0x02, 1, OP | 0x06, OP | 0x56, 0, OP | 0x57, 0, OP | 0x142])
             dummy_idx = len(new_blocks) - 1
+        if a.no_start_lock:
+            # rules with no zone key run at the start: drop their control lock (0x10c) and teleports to Sigma point
+            # ids (0x76 a, point) - the points are not in the NGB container, so the player would be stuck
+            for W in sty_blocks:
+                if any(W[j] == OP | 0x05 for j in range(len(W))):
+                    continue
+                for j in range(len(W)):
+                    if W[j] == OP | 0x10C:
+                        W[j] = DELETE; report.append("start lock 0x10c removed")
+                    elif W[j] == OP | 0x76:
+                        W[j:j + 3] = [DELETE] * 3; report.append("start teleport 0x76 removed")
+            for W in sty_blocks:
+                W[:] = [w for w in W if w != DELETE]      # in place: new_blocks holds the same lists
         ent = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.entrance.split(",") if z)
         tmap = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.type_map.split(",") if z)
         for W in new_blocks:
