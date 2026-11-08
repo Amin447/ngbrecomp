@@ -316,3 +316,13 @@ Test 2026-11-08: Genin->cat (plain spots): cats still passive and wave doors sta
 Test 2026-11-08: Genin->cat with kind 0xff + extras 2:0x10b,2:0x57: cats still wander, wave doors stay locked. Not spawn kind, not load. Cat probably needs stage-specific AI input (AI scripts in cat.chr use area/route sensors) - open. Titan/Yonin/Murai fight in ch1; cat does not.
 Cat AI (2026-11-08): Sigma tools (code_extract/tools/aiscript.py) do not decode NGB .chr AI correctly (op set differs; too few ops). Sigma cat.chr AI (03230, same enemy) decoded -> G:/NinjaGaidenBlack/enemy_swap/ai/cat_sigma.ai.txt. Main script: default mode var0=2/var2=1 = wander/approach (script 1: aim/route to Ryu, attack only when mode2838 self==1 / target==2, likely the battle group engagement state); special branches for its home battle groups 401/407 (areas). Hypothesis: in chapter 1 the Genin groups never set the cat engaged, so it wanders; titan/Yonin AI do not wait for it. Next: live log of the cat AI vars / mode (Sigma +0x2838 ~ NGB +0x279C if the +0x9C shift of type +0x2810/+0x2774 holds).
 ai_snap test 2026-11-08 (Genin->cat, 4 cats + Jonin): object +0x277C/+0x277E/+0x2780 = current move (3 copies), +0x2784.. = action. Cats only use moves 0x06-0x23 (walk/turn/idle), never attacks (Jonin 0x105/0x109 etc). Sigma-style AI vars (u16 x13) are not inside the 0x2800 object: NGB keeps the AI/controller block elsewhere (pointer not found yet). Spawn kinds from Genin spots stay in +0x2791 (0x80-0x82). Cat swap still open; next would be finding the NGB AI runner/controller.
+
+### Enemy AI decoded (2026-11-08)
+NGB .chr AI scripts (section 4 sub-table 0x10) = Sigma's bytecode with shifted op numbers:
+NGB op <= 0x30 same; 0x31-0x91 = Sigma +1; 0x92-0x96 (NOT/AND/OR/ELSE/END) = Sigma +4.
+tools/ngb_ai.py converts and runs Sigma's aiscript.py (needs G:/NinjaGaidenSigma/code_extract/tools).
+Decoded: G:/NinjaGaidenBlack/enemy_swap/ai/<name>.ngb_ai.txt (cat, genin, titan, yonin).
+Cat: script 0 "IF NOT in_area(self) -> var2 = 3" sends it to script 7 = walk back to its group's
+spot (op 0x4E = point INSIDE an area; aiscript's name outside_area reads backwards). In chapter 1's
+Genin groups the cat is never inside a group area, so it only wanders. Test patch: cat.chr script 0
+byte (pattern 92 4d 01 0d 02 03 00, the 03) -> 01 in userdata/Cache/chr_cat.afs (backup .bak).
