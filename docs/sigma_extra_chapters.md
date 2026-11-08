@@ -147,3 +147,13 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   Options: test it in a boff mission instead (Doku's spirit's home), or move on to the Tairon chapters.
   Current state: pyrmd changes still installed (restore game\pyrmd_cmn.afs.orig, game\load_img.bin.orig,
   Cache\pyrmd_cmn.afs.bak to undo).
+
+## Tairon: r_tlna04 (2026-11-08)
+- Load lists (section 2) are **per zone**: header of (u32 zone, u32 offset) pairs up to 0xFFFF, then one record list
+  per zone ({u16 pool, u16 key, u16 0} up to pool 0xFF). `--load-only` only handles single-zone lists (guarded).
+- New converter options: `--replace-zone-rules` (the container's zone-keyed rules = story stage logic also give their
+  slots/space to the converted rules; global rules = mission mechanics stay), `--drop-battles N`.
+  Item-drop ops 0x61/0x160/0x161 (item ids differ between games) and 0x16a/0x16c are dropped for now.
+- r_tlna04 (Rachel in Tairon: Super SWAT wave + Nicchae, zone 77) -> NGB Mission `m_54tlna.sty` (the Super SWAT
+  mission; it already loads Super SWAT in zone 77). Battle 0 (a Doku's-spirit 0x2F appearance) left out.
+  Same size, replaced in place. mods.txt adds Nicchae for `tln_a`.
