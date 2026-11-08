@@ -508,3 +508,11 @@ See docs/mission_anatomy.md: mission N = global file 0xB76+N (load_img.bin cat 1
   `--move RULE:x,y,z;...`. In Mission 00 each wave rule makes 1 enemy, max 3 alive.
 - Custom mission 1b "Doku, harder": same as 1 plus `--hp 75:90,50:60,25:30` and rules 11-19 `--repeat 4 --alive 4`.
 - Tested 2026-11-09: harder Doku mission looks right to the user (bigger, earlier waves; not measured exactly). Mission scripts have no difficulty variants: edits apply on every difficulty.
+
+## Custom mission loader: mods.txt `mission_file` (2026-11-09)
+`mission_file=<N>:<archive>:<file inside>:<our file>` (up to 4), e.g.
+`mission_file=0:yasik_cmn.afs:m_00mura.sty:custom/m_00_chapter1.sty`. No game file changes: a new after-read hook
+(`xbox_FileReadDoneHook` in xboxrecomp/src/kernel/kernel_file.c, both read paths) lets my_mods.c patch the mission's
+size in memory after `load_img.bin` (entry 0xB76+N) and the archive header are read, and copy our file over the
+mission when it is read. So a custom mission can be any size. stderr shows `[MOD] mission_file: ...` lines.
+Test 1: Mission 00 = unchanged chapter 1 story script s_yask00.sty (valley -> fortress -> Murai).
