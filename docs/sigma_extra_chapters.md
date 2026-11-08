@@ -57,3 +57,12 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
 - **Rachel chapters:** player Rachel = type 113 (I_REI); as Ryu it must become Ryu's type. Text ids are Sigma's (may be missing in NGB).
   r_tlna01 = hint popups only (no fights). Smallest fight chapter: **r_chrc03** (7+4 blocks, 1 Sigma-only op, enemy type 0x2C);
   then r_jigoku (43+4), r_hell (29+7: Nicchae + Ishtaros).
+
+## Converter + first test (2026-11-08)
+- `sigma2ngb_sty.py <sigma.sty> [<sigma.btl>] -o out.sty [--player 0] [--load-from <ngb.sty>]`: renumbers ops,
+  Rachel (113) -> Ryu (0), 1-arg Sigma-only ops -> no-op (`0x57 0`), merges Normal battle blocks from the .btl,
+  relocates op 0x9b data (pointer,words,pointer,words into the .btl), sets NGB header fields, optional NGB load list.
+- `afs_replace.py <afs> <name> <file>`: replace one file inside an AFS in place (.bak once).
+- Test installed: Sigma `r_chrc03` (Rachel vs Doku, church zones 183/188) converted and put over `s_chrc03.sty` in
+  `RecordBuild\userdata\Cache\chrch_cmn.afs` (backup chrch_cmn.afs.bak). NGB's own s_chrc03 (321 rules) also runs the
+  rest of that church part, so doors/items outside Doku's arena may not work during this test. Undo: copy the .bak back.
