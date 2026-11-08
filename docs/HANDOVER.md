@@ -306,3 +306,4 @@ Cutscenes use a separate list in the XBE (sub_001DBAE0, table 0x430158).
 New option load_chars=0x17,... (+ load_chars_area=yasik): sub_002EE0D0 also requests these
 (tools/patch_load_chars.py). Test pending: load_chars=0x17 + script swap Genin->Yonin.
 tools/ngb_loadlist.py is a first decoder of section 2 (record layout still partly off).
+RESULT 2026-11-08: load_chars=0x17 (load_chars_area=yasik) + script swap Genin->Yonin (ngb_sty_swap.py 0x800 0xE 0x17 0x5b,0x0f) -> **Yonin appear in story chapter 1**. Cross-chapter enemies work this way: add to the load list + swap the spawn type in the script.
