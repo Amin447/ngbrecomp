@@ -400,3 +400,10 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   table, so a file moved to the end of the archive is ignored: **a replaced file must fit its original slot**.
   Converter: with `--drop-container-spawns`, the converted rules now take over the emptied spawn rules' slot numbers
   and code space, so the rule list and file size stay the same (r_chrc03 in m_06arum: 113232 bytes, slots 178-252).
+- **Test 5 (2026-11-08): WORKS - Doku appears** in the Alma mission from Sigma's converted Rachel chapter r_chrc03.
+  First Sigma stage script running in NGB. Recipe:
+  1. `sigma2ngb_sty.py <r_x.sty> <r_x.btl> -o out.sty --container <NGB script of the same area> --drop-container-spawns --zone-map <sigma zone>:<ngb zone>`
+     (find the NGB zone by matching trigger boxes; Ryu's current zone = object +0x2786).
+  2. Load the new enemies with mods.txt `load_chars=` / `load_chars_area=`.
+  3. `afs_replace.py <Cache>/<area>_cmn.afs <script> out.sty` - the file must fit its original slot.
+  Next: Sigma-only multi-value ops (0x157, 0x154, 0x61/0x160/0x161) for the bigger chapters (r_jigoku, r_hell).
