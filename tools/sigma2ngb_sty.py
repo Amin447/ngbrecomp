@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sty_opmap import sigma_to_ngb
 
 OP = 0x82000000
+MAX_ENTRANCE = 2025          # highest op 0x79 id NGB uses in the 2000s range
 BTL_TAG = 0x40000000          # marks "battle rule n" until it is renumbered
 NORMAL_BIT = 1 << 1          # op 0x0A mask: bit 0 Ninja Dog, bit 1 Normal, ...
 
@@ -126,6 +127,7 @@ def main():
     ap.add_argument("--keep-container-blocks", action="store_true")
     ap.add_argument("--drop-container-spawns", action="store_true",
                     help="keep the container's rules except those that spawn enemies (0x5b 0,TYPE!=0)")
+    ap.add_argument("--entrance", default="", help="op 0x79 ids Sigma-only (>2025) -> NGB id per type, e.g. 0x59:2023,0x54:2025")
     ap.add_argument("--zone-map", default="", help="zone keys, e.g. 183:187,188:187")
     a = ap.parse_args()
     d = bytearray(open(a.sty, "rb").read())
@@ -205,6 +207,28 @@ def main():
         if dummy_slots:
             new_blocks.append([OP | 0x02, 1, OP | 0x06, OP | 0x56, 0, OP | 0x57, 0, OP | 0x142])
             dummy_idx = len(new_blocks) - 1
+        ent = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.entrance.split(",") if z)
+        for W in new_blocks:
+            cur = None
+            for j in range(len(W) - 3):
+                if not is_op(W[j]):
+                    continue
+                if W[j + 1] == 0 and W[j + 2] == 113 and not is_op(W[j + 2]):   # any (0, Rachel, ...) char ref
+                    W[j + 2] = a.player
+                if W[j] == OP | 0x5B and W[j + 1] == 0:
+                    cur = W[j + 2]
+                if W[j] == OP | 0x79 and W[j + 1] > MAX_ENTRANCE and W[j + 1] < 2100 and cur in ent:
+                    report.append(f"entrance {W[j+1]} -> {ent[cur]} for type {cur:#x}")
+                    W[j + 1] = ent[cur]
+        # op 0x9c id: Sigma-only ids (> 257, NGB's highest) -> the id the container itself uses most
+        cw = struct.unpack_from(f"<{(csecs[1] - csecs[0]) // 4}I", cd, csecs[0])
+        c9 = [cw[j + 1] for j in range(len(cw) - 1) if cw[j] == OP | 0x9C]
+        if c9:
+            own9c = max(set(c9), key=c9.count)
+            for W in new_blocks:
+                for j in range(len(W) - 1):
+                    if W[j] == OP | 0x9C and W[j + 1] > 257:
+                        report.append(f"0x9c id {W[j+1]} -> {own9c} (container's)"); W[j + 1] = own9c
         zm = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.zone_map.split(",") if z)
         for W in new_blocks:
             for j in range(len(W) - 1):
@@ -230,8 +254,8 @@ def main():
     for W, slot in zip(new_blocks, targets):
         # op 0x9b (pointer, words, pointer, words) points into the .btl's own data: copy it and re-point
         for i, w in enumerate(W):
-            if w == OP | 0x9B:
-                for k in (1, 3):
+            if w in (OP | 0x9B, OP | 0x9C):          # 0x9c has an id first: (id, ptr, words, ptr, words)
+                for k in ((1, 3) if w == OP | 0x9B else (2, 4)):
                     src, n = W[i + k], W[i + k + 1]
                     W[i + k] = alloc(bytes(bd[bsecs[0] + src: bsecs[0] + src + 4 * n]))
                 report.append("op 0x9b data relocated")
