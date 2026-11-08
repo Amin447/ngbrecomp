@@ -19,6 +19,7 @@ from sty_opmap import sigma_to_ngb
 
 OP = 0x82000000
 MAX_ENTRANCE = 2025          # highest op 0x79 id NGB uses in the 2000s range
+DELETE = 0xDE1E7E00         # placeholder for a word to remove
 BTL_TAG = 0x40000000          # marks "battle rule n" until it is renumbered
 NORMAL_BIT = 1 << 1          # op 0x0A mask: bit 0 Ninja Dog, bit 1 Normal, ...
 
@@ -89,8 +90,8 @@ def sigma_pre(W, report):
         elif o == 0x157:
             if args[0] != 1024:
                 out += [OP | 0xE5, args[0], args[1]]
-        elif o == 0x16B:
-            report.append(f"0x16b{tuple(args)} dropped")
+        elif o in (0x16A, 0x16B, 0x16C, 0x61, 0x160, 0x161):
+            report.append(f"{o:#x}{tuple(args)} dropped")
         else:
             out += W[i:j]
     return out
@@ -128,6 +129,9 @@ def main():
     ap.add_argument("--drop-container-spawns", action="store_true",
                     help="keep the container's rules except those that spawn enemies (0x5b 0,TYPE!=0)")
     ap.add_argument("--entrance", default="", help="op 0x79 ids Sigma-only (>2025) -> NGB id per type, e.g. 0x59:2023,0x54:2025")
+    ap.add_argument("--replace-zone-rules", action="store_true",
+                    help="also give the container's zone-keyed rules (story stage logic) to the converted rules")
+    ap.add_argument("--drop-battles", default="", help="battle-file block numbers to leave out, e.g. 0")
     ap.add_argument("--load-only", default="", help="keep only these characters (and their extras) in the load list, e.g. 0x2f")
     ap.add_argument("--zone-map", default="", help="zone keys, e.g. 183:187,188:187")
     a = ap.parse_args()
@@ -157,7 +161,10 @@ def main():
         bd = open(a.btl, "rb").read()
         bt, bsecs = sections(bd)
         bh, bL = block_list(bd, bsecs[0])
+        skip = {int(x, 0) for x in a.drop_battles.split(",") if x}
         for j, b in enumerate(bL):
+            if j in skip:
+                report.append(f"battle {j} left out"); continue
             W = btl_to_sty_block(block_words(bd, bsecs[0], b))
             if W is None:
                 report.append(f"btl block {b:#x}: not Normal, skipped"); continue
@@ -181,7 +188,10 @@ def main():
             def spawns(b):
                 W = block_words(cd, s0, b, 0x142)
                 return any(W[j] == OP | 0x5B and W[j + 1] == 0 and W[j + 2] != 0 for j in range(len(W) - 2))
-            dummy_slots = [k for k, b in enumerate(L) if spawns(b)]
+            def zoned(b):
+                W = block_words(cd, s0, b, 0x142)
+                return any(W[j] == OP | 0x05 for j in range(len(W)))
+            dummy_slots = [k for k, b in enumerate(L) if spawns(b) or (a.replace_zone_rules and zoned(b))]
             report.append(f"{len(dummy_slots)} container spawn rules emptied")
         # op 0xd6 (n, state) switches rule n on (1) / off (3): renumber to the new positions
         n_new = len(sty_blocks) + len(btl_kept)
@@ -196,14 +206,21 @@ def main():
         btl_map = {j: slots[len(sty_blocks) + k] for k, j in enumerate(btl_kept)}
         for j, k in btl_dup.items():
             btl_map[j] = sty_map[k]
+        dummy_hint = 0xFFFF            # start of a left-out battle: switch on nothing
         def renum(W, own):
             for j in range(len(W) - 1):
                 if W[j] == OP | 0xD6 and W[j + 1] < 0x10000:
                     W[j + 1] = own.get(W[j + 1], W[j + 1])
                 elif W[j] == OP | 0xD6 and W[j + 1] & BTL_TAG:      # from Sigma 0x153 = start battle n
-                    W[j + 1] = btl_map[W[j + 1] & 0xFFFF]
+                    tgt = btl_map.get(W[j + 1] & 0xFFFF)
+                    if tgt is None:                  # left-out battle: becomes "wait 0" (0x57 0)
+                        W[j], W[j + 1], W[j + 2] = OP | 0x57, 0, DELETE
+                    else:
+                        W[j + 1] = tgt
         for W in sty_blocks: renum(W, sty_map)
         for W in new_blocks: renum(W, sty_map)    # battle rules use the .sty's rule numbers
+        sty_blocks = [[w for w in W if w != DELETE] for W in sty_blocks]
+        new_blocks = [[w for w in W if w != DELETE] for W in new_blocks]
         new_blocks = sty_blocks + new_blocks
         if dummy_slots:
             new_blocks.append([OP | 0x02, 1, OP | 0x06, OP | 0x56, 0, OP | 0x57, 0, OP | 0x142])
@@ -285,7 +302,11 @@ def main():
         # load list (section 2): 0x16-byte header, then 6-byte records {u16 pool, u16 key, u16 0} up to pool 0xFF;
         # pool-2 records belong to the pool-0 record before them
         keep = {int(x, 0) for x in a.load_only.split(",")}
-        L2 = bytearray(rest[1]); recs, q = [], 0x16
+        L2 = bytearray(rest[1])
+        # the list starts with (zone, offset) pairs up to 0xFFFF; only single-zone lists are handled here
+        if struct.unpack_from("<I", L2, 8)[0] != 0xFFFF:
+            raise SystemExit("--load-only: this load list has several zones (per-zone lists) - not supported yet")
+        recs, q = [], 0x16
         while q + 6 <= len(L2) and struct.unpack_from("<H", L2, q)[0] != 0xFF:
             recs.append(struct.unpack_from("<3H", L2, q)); q += 6
         tail = bytes(L2[q:])
