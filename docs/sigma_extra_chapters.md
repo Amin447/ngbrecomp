@@ -82,3 +82,7 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   Converter now: renumbers 0xd6 targets to the rules' new positions, turns 0x153 n into `0xd6 <battle rule> 1`,
   keeps the container's emptied spawn rules in their slots (pointing at an empty rule) so its own numbering stays valid.
   `afs_replace.py` appends a file at the end of the archive when it no longer fits its slot.
+- **Test 4 result: the original mission ran** (Alma appeared). The game finds files through its own built-in file
+  table, so a file moved to the end of the archive is ignored: **a replaced file must fit its original slot**.
+  Converter: with `--drop-container-spawns`, the converted rules now take over the emptied spawn rules' slot numbers
+  and code space, so the rule list and file size stay the same (r_chrc03 in m_06arum: 113232 bytes, slots 178-252).
