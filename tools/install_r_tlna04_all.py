@@ -24,7 +24,7 @@ for m in ('m_27tlna', 'm_33tlna', 'm_39tlna', 'm_43tlna', 'm_53tlna', 'm_54tlna'
     tm = [] if 0x2e in cand else ([f'--type-map', f'0x2e:{cand[0]:#x}'] if cand else [])
     r = subprocess.run([sys.executable, '-I', 'G:/NinjaGaidenSigma/levels/sigma2ngb_sty.py', X + '04326.stry_dat', X + '04327.btl_dat',
                         '-o', f'r_tlna04_{m}.sty', '--container', 'ngb_' + m + '.sty', '--drop-container-spawns',
-                        '--replace-zone-rules', '--drop-battles', '0'] + tm, capture_output=True, text=True)
+                        '--replace-zone-rules', '--drop-battles', '0', '--no-start-lock'] + tm, capture_output=True, text=True)
     new = open(f'r_tlna04_{m}.sty', 'rb').read()
     ok = len(new) == len(d)
     print(m, 'zone77 types', [hex(x) for x in cand], 'map', tm[1:] or 'none', 'size ok' if ok else f'SIZE {len(new)} != {len(d)}', r.stderr[-200:])
