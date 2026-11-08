@@ -425,3 +425,15 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   Lesson: some bosses need companion characters; check the boss's own NGB mission load list (section 2) for
   pool-0 entries right after it. (enemy_swap_data.csv's extras for 0x5B are wrong - it picked up the next records.)
 - **Confirmed 2026-11-08:** with 0x5B loaded, Ishtaros has her hand. r_hell fully works.
+
+## Several areas at once + r_jigoku (2026-11-08)
+- **mods.txt `load_chars` per area:** up to 8 `load_chars=` lines (64 entries), each followed by its own
+  `load_chars_area=`; every area gets only its own line's extras (my_mods.c, exe built 22:10). Current lines:
+  yasik (cats), chrch (Doku), hell (Ishtaros + hand 0x5B), pyrmd (Doku's spirit 0x2F + companions 0x32, 0x33).
+- **Why the moved file was ignored (test 4):** if a cached archive's total size differs from the original, the game
+  copies the original back into the cache. So an archive must keep its size. `afs_replace.py --borrow <file>` puts a
+  bigger file into the slot of a file that is not needed (the append fallback was removed).
+- **r_jigoku** (Rachel vs Doku's spirit, pyramid zone 106) converted into BOTH pyramid missions `m_16s_ar` and
+  `m_59prmd` (their arenas match Rachel's coordinates). They borrow the slots of `s_jigoku_l2.sty` / `s_jigoku_l4.sty`,
+  so **the story pyramid on Hard / Master Ninja is broken until pyrmd_cmn.afs.bak is restored**.
+  Doku's spirit needs companions (from m_17s_dk's load list): `load_chars=0x2f,2:0xb8,2:0x3,0x32,2:0x89,0x33,1:0xb8`.
