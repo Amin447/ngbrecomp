@@ -407,3 +407,7 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
   2. Load the new enemies with mods.txt `load_chars=` / `load_chars_area=`.
   3. `afs_replace.py <Cache>/<area>_cmn.afs <script> out.sty` - the file must fit its original slot.
   Next: Sigma-only multi-value ops (0x157, 0x154, 0x61/0x160/0x161) for the bigger chapters (r_jigoku, r_hell).
+- **r_hell (2026-11-08):** Sigma-only ops now converted: `0x153 n` / `0x154 v0..v4` (start battle; v1 = Normal) ->
+  `0xd6 battle 1`; `0x157 n,s` = rule switch like 0xd6 (n=1024 = none, dropped); `0x16b` dropped. Battle-file rules use
+  the .sty's rule numbers. r_hell (zone 213, Nicchae 0x59 + Ishtaros 0x54) put into NGB Mission `m_72arub.sty`
+  (Nicchae mission, hell area, same zone 213); mods.txt loads Ishtaros in `hell` (Nicchae is already loaded there).
