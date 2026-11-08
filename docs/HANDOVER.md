@@ -471,3 +471,6 @@ Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl
 - r_tlna04 (Rachel in Tairon: Super SWAT wave + Nicchae, zone 77) -> NGB Mission `m_54tlna.sty` (the Super SWAT
   mission; it already loads Super SWAT in zone 77). Battle 0 (a Doku's-spirit 0x2F appearance) left out.
   Same size, replaced in place. mods.txt adds Nicchae for `tln_a`.
+- r_tlna04 test 1: the user opened m_70tlna (unchanged; regular SWAT + Genin) and it hung while loading. Like m_59prmd,
+  an unchanged big mission hangs once mods.txt adds a boss (Nicchae) to its area: **extra load_chars in big story-stage
+  missions run out of memory**. Nicchae line for tln_a commented out; test m_54tlna (Super SWAT + dinosaurs) without it.
