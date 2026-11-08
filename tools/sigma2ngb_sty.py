@@ -162,9 +162,16 @@ def main():
             dummy_slots = [k for k, b in enumerate(L) if spawns(b)]
             report.append(f"{len(dummy_slots)} container spawn rules emptied")
         # op 0xd6 (n, state) switches rule n on (1) / off (3): renumber to the new positions
-        base = len(L)
-        sty_map = {k: base + k for k in range(len(sty_blocks))}
-        btl_map = {j: base + len(sty_blocks) + k for k, j in enumerate(btl_kept)}
+        n_new = len(sty_blocks) + len(btl_kept)
+        if len(dummy_slots) >= n_new:
+            # reuse the emptied rules' slot numbers (list keeps its size) and their code space
+            slots = dummy_slots[:n_new]; dummy_slots = dummy_slots[n_new:]
+            free = [[L[k], 4 * len(block_words(cd, s0, L[k], 0x142))] for k in slots + dummy_slots]
+            report.append(f"converted rules take slots {slots}")
+        else:
+            slots = list(range(len(L), len(L) + n_new)); free = []
+        sty_map = {k: slots[k] for k in range(len(sty_blocks))}
+        btl_map = {j: slots[len(sty_blocks) + k] for k, j in enumerate(btl_kept)}
         for j, k in btl_dup.items():
             btl_map[j] = sty_map[k]
         def renum(W, own):
@@ -189,21 +196,35 @@ def main():
     sec0 = bytearray(d[s0:s1])
     pad = (-len(sec0)) % 16; sec0 += b"\0" * pad
     offs = list(L)
-    for W in new_blocks:
+    if not a.container:
+        slots, free = list(range(len(L), len(L) + len(new_blocks))), []
+    def alloc(data):
+        nonlocal_sec = sec0
+        for f in free:
+            if len(data) <= f[1]:
+                at = f[0]; nonlocal_sec[at:at + len(data)] = data
+                f[0] += len(data); f[1] -= len(data); return at
+        at = len(nonlocal_sec); nonlocal_sec += data; nonlocal_sec += b"\0" * ((-len(nonlocal_sec)) % 16)
+        return at
+    targets = list(slots) + ([] if not dummy_slots else ["dummy"])
+    dummy_off = None
+    for W, slot in zip(new_blocks, targets):
         # op 0x9b (pointer, words, pointer, words) points into the .btl's own data: copy it and re-point
         for i, w in enumerate(W):
             if w == OP | 0x9B:
                 for k in (1, 3):
                     src, n = W[i + k], W[i + k + 1]
-                    W[i + k] = len(sec0)
-                    sec0 += bd[bsecs[0] + src: bsecs[0] + src + 4 * n]; sec0 += b"\0" * ((-len(sec0)) % 16)
+                    W[i + k] = alloc(bytes(bd[bsecs[0] + src: bsecs[0] + src + 4 * n]))
                 report.append("op 0x9b data relocated")
-        offs.append(len(sec0)); sec0 += struct.pack(f"<{len(W)}I", *W)
-        sec0 += b"\0" * ((-len(sec0)) % 16)
-    if dummy_slots:                       # emptied container spawn rules all point at the empty rule
-        dummy_off = offs.pop()
-        for k in dummy_slots:
-            offs[k] = dummy_off
+        at = alloc(struct.pack(f"<{len(W)}I", *W))
+        if slot == "dummy":
+            dummy_off = at
+        elif slot < len(offs):
+            offs[slot] = at
+        else:
+            offs.append(at)
+    for k in dummy_slots:                 # emptied container spawn rules all point at the empty rule
+        offs[k] = dummy_off
     old_n = len(block_list(d, s0)[1])
     if len(offs) <= old_n:                 # reuse the old list's space (keeps the file small)
         struct.pack_into(f"<{old_n + 1}I", sec0, h[6], *offs, *([0] * (old_n + 1 - len(offs))))
