@@ -56,3 +56,4 @@ back in place (reusing sigma2ngb_sty.py's block reader and afs_replace.py).
   (Doku replaces Murai; Hannya waves -> red ninjas to make room in the load list). Installed in
   Cache\yasik_cmn.afs (copy before: yasik_cmn.afs.before_mission; the chapter 1 cat swap there is unchanged);
   mods.txt cat lines turned off for the test.
+- **Tested 2026-11-08: WORKS - Doku fights in Mission 00** (custom mission 1).
