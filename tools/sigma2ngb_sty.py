@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sty_opmap import sigma_to_ngb
 
 OP = 0x82000000
+BTL_TAG = 0x40000000          # marks "battle rule n" until it is renumbered
 NORMAL_BIT = 1 << 1          # op 0x0A mask: bit 0 Ninja Dog, bit 1 Normal, ...
 
 
@@ -107,47 +108,77 @@ def main():
     s0, s1 = secs[0], secs[1]
     h, L = block_list(d, s0)
     report = []
-    # convert existing blocks in place (same size)
+    # convert existing blocks in place (same size); in container mode Sigma 0x153 n (start battle n)
+    # becomes 0xd6 (battle rule, 1) - one word longer, so those blocks are kept as word lists
+    grown = {}
     for b in L:
         W = block_words(d, s0, b)
-        struct.pack_into(f"<{len(W)}I", d, s0 + b, *convert_words(W, a.player, report))
-    existing = {tuple(block_words(d, s0, b, 0x142)) for b in L}
+        if a.container:
+            V = []
+            for i, w in enumerate(W):
+                V.append(w)
+                if w == OP | 0x153:
+                    V[-1] = OP | 0xE5; V.append(BTL_TAG | W[i + 1]); V.append(1)
+                    report.append(f"0x153({W[i+1]}) -> start battle rule {W[i+1]}")
+                elif i > 0 and W[i - 1] == OP | 0x153:
+                    V.pop()
+            W = V
+        W = convert_words(W, a.player, report)
+        if len(W) != len(block_words(d, s0, b)):
+            grown[b] = W
+        else:
+            struct.pack_into(f"<{len(W)}I", d, s0 + b, *W)
+    getW = lambda b: grown.get(b) or block_words(d, s0, b, 0x142)
+    existing = {tuple(getW(b)) for b in L}
     # battle blocks
-    new_blocks = []
+    new_blocks, btl_kept, btl_dup, dummy_slots = [], [], {}, []
+    sty_list = [tuple(getW(b)) for b in L]
     if a.btl:
         bd = open(a.btl, "rb").read()
         bt, bsecs = sections(bd)
         bh, bL = block_list(bd, bsecs[0])
-        for b in bL:
+        for j, b in enumerate(bL):
             W = btl_to_sty_block(block_words(bd, bsecs[0], b))
             if W is None:
                 report.append(f"btl block {b:#x}: not Normal, skipped"); continue
             W = convert_words(W, a.player, report)
             if tuple(W) in existing:
-                continue
+                btl_dup[j] = sty_list.index(tuple(W)); continue
+            btl_kept.append(j)
             new_blocks.append(W)
     if a.container:
         # NGB file of the same area supplies every table; only the converted rules are put in
-        sty_blocks = [block_words(d, s0, b, 0x142) for b in L]
+        sty_blocks = [list(getW(b)) for b in L]
         cd = bytearray(open(a.container, "rb").read())
         ct, csecs = sections(cd)
         ch, cL = block_list(cd, csecs[0])
         d, t, secs, s0, s1, h = cd, ct, csecs, csecs[0], csecs[1], ch
         L = cL if (a.keep_container_blocks or a.drop_container_spawns) else []
         if a.drop_container_spawns:
+            # rules are switched on BY NUMBER (op 0xd6 n,1), so keep every slot: spawn rules -> an empty rule
             def spawns(b):
                 W = block_words(cd, s0, b, 0x142)
                 return any(W[j] == OP | 0x5B and W[j + 1] == 0 and W[j + 2] != 0 for j in range(len(W) - 2))
-            L = [b for b in L if not spawns(b)]
-        new_blocks = sty_blocks + new_blocks
-        # move the converted rules' flags (op 0xd6 first arg) above every flag the container uses
-        cw = struct.unpack_from(f"<{(csecs[1] - csecs[0]) // 4}I", cd, csecs[0])
-        top = max(cw[j + 1] for j in range(len(cw) - 2) if cw[j] == OP | 0xD6 and cw[j + 1] < 0x10000) + 1
-        for W in new_blocks:
+            dummy_slots = [k for k, b in enumerate(L) if spawns(b)]
+            report.append(f"{len(dummy_slots)} container spawn rules emptied")
+        # op 0xd6 (n, state) switches rule n on (1) / off (3): renumber to the new positions
+        base = len(L)
+        sty_map = {k: base + k for k in range(len(sty_blocks))}
+        btl_map = {j: base + len(sty_blocks) + k for k, j in enumerate(btl_kept)}
+        for j, k in btl_dup.items():
+            btl_map[j] = sty_map[k]
+        def renum(W, own):
             for j in range(len(W) - 1):
                 if W[j] == OP | 0xD6 and W[j + 1] < 0x10000:
-                    W[j + 1] += top
-        report.append(f"flags moved up by {top}")
+                    W[j + 1] = own.get(W[j + 1], W[j + 1])
+                elif W[j] == OP | 0xD6 and W[j + 1] & BTL_TAG:      # from Sigma 0x153 = start battle n
+                    W[j + 1] = btl_map[W[j + 1] & 0xFFFF]
+        for W in sty_blocks: renum(W, sty_map)
+        for W in new_blocks: renum(W, btl_map)
+        new_blocks = sty_blocks + new_blocks
+        if dummy_slots:
+            new_blocks.append([OP | 0x02, 1, OP | 0x06, OP | 0x56, 0, OP | 0x57, 0, OP | 0x142])
+            dummy_idx = len(new_blocks) - 1
         zm = dict(tuple(int(x, 0) for x in z.split(":")) for z in a.zone_map.split(",") if z)
         for W in new_blocks:
             for j in range(len(W) - 1):
@@ -169,6 +200,10 @@ def main():
                 report.append("op 0x9b data relocated")
         offs.append(len(sec0)); sec0 += struct.pack(f"<{len(W)}I", *W)
         sec0 += b"\0" * ((-len(sec0)) % 16)
+    if dummy_slots:                       # emptied container spawn rules all point at the empty rule
+        dummy_off = offs.pop()
+        for k in dummy_slots:
+            offs[k] = dummy_off
     old_n = len(block_list(d, s0)[1])
     if len(offs) <= old_n:                 # reuse the old list's space (keeps the file small)
         struct.pack_into(f"<{old_n + 1}I", sec0, h[6], *offs, *([0] * (old_n + 1 - len(offs))))
