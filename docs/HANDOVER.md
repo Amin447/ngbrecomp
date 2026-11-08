@@ -344,3 +344,14 @@ Working chapter 1: `python -I ngb_sty_swap.py <Cache>/yasik_cmn.afs 0x800 0xe 0x
 
 ## Sigma extra chapters (2026-11-08)
 See docs/sigma_extra_chapters.md: Rachel chapters use NGB areas; blockers = script op numbering, playable Rachel, KMD model format. Next: Sigma->NGB stage-script op map.
+
+## Sigma -> NGB stage-script op map (built 2026-11-08)
+Tool `sty_opmap.py` (G:\NinjaGaidenSigma\levels, copy in G:\NinjaGaidenBlack and repo tools/). Found by aligning four
+chapters of both games on their arguments (~44k instructions).
+- NGB 0x01-0x05 = Sigma same; NGB 0x06-0x55 = Sigma +5; NGB 0x56-0x141 = Sigma +0x0F; NGB 0x142 = Sigma 0x16E.
+- Sigma-only ops are mostly multi-value (per difficulty) versions of NGB ops, e.g. 0x61(a,x,...)=NGB 0x2c(a,x),
+  0x160=0x83, 0x161=0x11f, 0x162/163/164=0xd1/d2/d4; flag ops 0x153-0x157 = NGB 0xd6 but with **different flag ids**
+  (Sigma 1024 = NGB 896); item ids differ too (Sigma 42 = NGB 64).
+- NGB has no .btl files; Sigma battles (.btl, ops 0x06-0x0a) must be merged into the .sty.
+- Rachel chapters by Sigma-only ops: r_tlna01 0 (fully convertible), r_chrc03 1, r_jigoku 2, r_hell 3, r_isle01 27, others 100-450.
+Next: flag-id + item-id maps (same alignment), then convert r_tlna01 (+ its .btl) and try it in tln_a as Ryu.
