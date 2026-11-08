@@ -70,6 +70,31 @@ def convert_words(W, player, report):
     return W
 
 
+def sigma_pre(W, report):
+    """Rewrite Sigma-only ops that NGB has an equivalent for (container mode: block sizes may change).
+      0x153 n            -> 0xd6 (battle rule n, 1)      start battle n
+      0x154 v0..v4       -> 0xd6 (battle rule v1, 1)     start battle chosen by difficulty (v1 = Normal)
+      0x157 n, s         -> 0xd6 (n, s); dropped when n = 1024 (= none)
+      0x16b a, b         -> dropped (unknown, cosmetic in r_hell)"""
+    idx = [i for i, w in enumerate(W) if is_op(w)] + [len(W)]
+    out = list(W[:idx[0]])
+    for k in range(len(idx) - 1):
+        i, j = idx[k], idx[k + 1]
+        o, args = W[i] & 0xFFFFFF, list(W[i + 1:j])
+        if o == 0x153:
+            out += [OP | 0xE5, BTL_TAG | args[0], 1]; report.append(f"0x153{tuple(args)} -> start battle {args[0]}")
+        elif o == 0x154:
+            out += [OP | 0xE5, BTL_TAG | args[1], 1]; report.append(f"0x154{tuple(args)} -> start battle {args[1]}")
+        elif o == 0x157:
+            if args[0] != 1024:
+                out += [OP | 0xE5, args[0], args[1]]
+        elif o == 0x16B:
+            report.append(f"0x16b{tuple(args)} dropped")
+        else:
+            out += W[i:j]
+    return out
+
+
 def btl_to_sty_block(W):
     """Sigma battle block -> plain rule block, or None if not the Normal variant."""
     ops = [i for i, w in enumerate(W) if is_op(w)]
@@ -114,15 +139,7 @@ def main():
     for b in L:
         W = block_words(d, s0, b)
         if a.container:
-            V = []
-            for i, w in enumerate(W):
-                V.append(w)
-                if w == OP | 0x153:
-                    V[-1] = OP | 0xE5; V.append(BTL_TAG | W[i + 1]); V.append(1)
-                    report.append(f"0x153({W[i+1]}) -> start battle rule {W[i+1]}")
-                elif i > 0 and W[i - 1] == OP | 0x153:
-                    V.pop()
-            W = V
+            W = sigma_pre(W, report)
         W = convert_words(W, a.player, report)
         if len(W) != len(block_words(d, s0, b)):
             grown[b] = W
@@ -141,6 +158,8 @@ def main():
             W = btl_to_sty_block(block_words(bd, bsecs[0], b))
             if W is None:
                 report.append(f"btl block {b:#x}: not Normal, skipped"); continue
+            if a.container:
+                W = sigma_pre(W, report)
             W = convert_words(W, a.player, report)
             if tuple(W) in existing:
                 btl_dup[j] = sty_list.index(tuple(W)); continue
@@ -181,7 +200,7 @@ def main():
                 elif W[j] == OP | 0xD6 and W[j + 1] & BTL_TAG:      # from Sigma 0x153 = start battle n
                     W[j + 1] = btl_map[W[j + 1] & 0xFFFF]
         for W in sty_blocks: renum(W, sty_map)
-        for W in new_blocks: renum(W, btl_map)
+        for W in new_blocks: renum(W, sty_map)    # battle rules use the .sty's rule numbers
         new_blocks = sty_blocks + new_blocks
         if dummy_slots:
             new_blocks.append([OP | 0x02, 1, OP | 0x06, OP | 0x56, 0, OP | 0x57, 0, OP | 0x142])
