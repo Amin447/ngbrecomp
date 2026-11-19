@@ -522,3 +522,11 @@ Test 1: Mission 00 = unchanged chapter 1 story script s_yask00.sty (valley -> fo
   (30 = Murai dead -> clear, 31-36 results, 37 helper) to the end of the chapter script (rules 522-529, d6 targets
   renumbered) and points rule 338 at it. custom/m_00_chapter1.sty (story-only copy kept as m_00_chapter1_story_only.sty).
 - **Reverted 2026-11-09 (user moved on):** mission_file line removed from mods.txt, chapter 1 cat lines back on, custom mission files parked in RecordBuild\custom_off, mansion archive = state before the mission work. Code (editor, loader, after-read hook) kept, inactive.
+
+## 2026-11-19: rebased on upstream v0.9.74
+my-mods was rebased from v0.9.57 onto upstream v0.9.74 (old branch kept as backup/my-mods-pre-0.9.74).
+Conflicts fixed: src/bindings.c (my pad_remap wrapper + upstream menu-held fix), kernel_file.c (my read hooks
+moved into upstream's new pread loop). Upstream now hand-writes sub_001FE350/00154240/002FD3E0/001868F0, so
+src/recomp/gen had to be regenerated (tools/pipeline.sh, then all tools/patch_*.py). patch_type_write.py
+(saved incomplete) and patch_move_pick.py (rewrote my_mods.c every run) now only patch the generated code.
+Windows build: 0 errors. Not yet tested in game.
